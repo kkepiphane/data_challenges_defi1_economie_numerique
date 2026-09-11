@@ -15,10 +15,16 @@ declaree valide.
 | Notice et dépendances embarquées | OK | README.md + requirements.txt |
 | Aucun cache Python dans l'archive | OK | 38 entrées |
 | Archive sous 10 Mo | OK | 0.5 Mo |
-| Page « Vue d'ensemble » | OK | 29 blocs, 0 tables |
-| Page « Infrastructures » | OK | 32 blocs, 1 tables |
-| Page « Desserte & population » | OK | 24 blocs, 1 tables |
-| Page « Territoires prioritaires » | OK | 37 blocs, 2 tables |
-| Page « Arbitrage » | OK | 35 blocs, 2 tables |
-| Page « Plan d'action » | OK | 37 blocs, 1 tables |
-| Page « Méthode & limites » | OK | 29 blocs, 2 tables |
+| Page « Vue d'ensemble » | OK | 26 blocs, 0 tables |
+| Page « Infrastructures » | OK | 30 blocs, 1 tables |
+| Page « Desserte & population » | OK | 22 blocs, 1 tables |
+| Page « Territoires prioritaires » | OK | 32 blocs, 2 tables |
+| Page « Arbitrage » | OK | 31 blocs, 2 tables |
+| Page « Plan d'action » | OK | 36 blocs, 1 tables |
+| Page « Méthode & limites » | OK | 30 blocs, 2 tables |
+| Feuille de style réémise à chaque rendu | OK | 4 rendus successifs : [True, True, True, True] |
+| Feuille de style conservée après navigation | OK | clic sur « Arbitrage » dans la navigation |
+| Aucun sélecteur large n'écrase la fonte des icônes | OK | fonte symbole préservée |
+| Le sommaire refermé reste réouvrable | OK | « Deploy » masqué seul, bouton de réouverture conservé |
+| Départs rapides de pondération sans exception | OK | 4 préréglages appliqués |
+| Repondération de référence = DCPI publié | OK | écart max 7.11e-15 · corrélation des rangs 1.0000 |

@@ -60,7 +60,7 @@ def afficher(ctx: dict) -> None:
     etab_vue = etab[etab.prefecture.isin(ctx["prefectures"])]
 
     st.markdown(T.bandeau(
-        "Axes d'analyse", "Infrastructures",
+        "Diagnostic · 02", "Infrastructures",
         "Où sont les agences d'opérateur et les centres de données, et cette "
         "implantation suit-elle la population ?"), unsafe_allow_html=True)
 
@@ -68,13 +68,11 @@ def afficher(ctx: dict) -> None:
     g, d = st.columns([1, 3.1], gap="medium")
 
     with g:
-        st.markdown(T.carte_ouvre("Ce que la carte affiche"),
-                    unsafe_allow_html=True)
-        cats = ["Agence Moov", "Agence Togocom", "Data center"]
-        sel = st.multiselect("Type", cats, default=cats,
-                             label_visibility="collapsed")
-        fond = st.toggle("Fond des 19 788 points Mobile Money", value=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Ce que la carte affiche"):
+            cats = ["Agence Moov", "Agence Togocom", "Data center"]
+            sel = st.multiselect("Type", cats, default=cats,
+                                 label_visibility="collapsed")
+            fond = st.toggle("Fond des 19 788 points Mobile Money", value=True)
 
         pts = etab_vue[etab_vue.categorie.isin(sel)]
         st.markdown("")
@@ -86,27 +84,25 @@ def afficher(ctx: dict) -> None:
             st.markdown("")
 
     with d:
-        st.markdown(T.carte_ouvre(
-            "Implantation des équipements télécoms · limites régionales en "
-            "trait sombre, préfectorales en liseré blanc"),
-            unsafe_allow_html=True)
-        couches = []
-        for cat, coul in zip(cats, T.CATEGORIEL):
-            s = pts[pts.categorie == cat]
-            couches.append({
-                "nom": cat, "couleur": coul,
-                "lat": s.lat.tolist(), "lon": s.lon.tolist(),
-                "texte": [f"<b>{n}</b><br>{c}, {p}<br>"
-                          f"<span style='color:#8b8a84'>{r}</span>"
-                          for n, c, p, r in zip(s.etab_nom, s.commune,
-                                                s.prefecture, s.region)]})
-        mm = None
-        if fond:
-            mm = D.mobile_money()
-            mm = mm[mm.prefecture.isin(ctx["prefectures"])]
-        st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, mm),
-                        width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(
+                "Implantation des équipements télécoms · limites régionales en "
+                "trait sombre, préfectorales en liseré blanc"):
+            couches = []
+            for cat, coul in zip(cats, T.CATEGORIEL):
+                s = pts[pts.categorie == cat]
+                couches.append({
+                    "nom": cat, "couleur": coul,
+                    "lat": s.lat.tolist(), "lon": s.lon.tolist(),
+                    "texte": [f"<b>{n}</b><br>{c}, {p}<br>"
+                              f"<span style='color:#8b8a84'>{r}</span>"
+                              for n, c, p, r in zip(s.etab_nom, s.commune,
+                                                    s.prefecture, s.region)]})
+            mm = None
+            if fond:
+                mm = D.mobile_money()
+                mm = mm[mm.prefecture.isin(ctx["prefectures"])]
+            st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, mm),
+                            width="stretch", config={"displayModeBar": False})
 
     st.markdown(
         T.action(
@@ -117,19 +113,17 @@ def afficher(ctx: dict) -> None:
 
     # ================================================ choroplèthe pilotée
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.4rem">'
-                'Lecture territoriale</div>', unsafe_allow_html=True)
+    st.markdown(T.etiquette("Lecture territoriale", "1.4rem"), unsafe_allow_html=True)
     choix = st.radio("Indicateur", list(INDICATEURS), horizontal=True,
                      label_visibility="collapsed")
     col, titre_ech, fmt, question, lecture = INDICATEURS[choix]
 
     g2, d2 = st.columns([3.1, 1], gap="medium")
     with g2:
-        st.markdown(T.carte_ouvre(choix), unsafe_allow_html=True)
-        st.plotly_chart(
-            cartes.choroplethe(vue, geo, col, titre_ech, fmt, 600),
-            width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(choix):
+            st.plotly_chart(
+                cartes.choroplethe(vue, geo, col, titre_ech, fmt, 600),
+                width="stretch", config={"displayModeBar": False})
     with d2:
         st.markdown(T.question(question), unsafe_allow_html=True)
         st.markdown(T.lecture(lecture), unsafe_allow_html=True)
@@ -159,4 +153,4 @@ def afficher(ctx: dict) -> None:
             "Population": "{:,.0f}", "Superficie (km²)": "{:,.0f}",
             "Densité (hab/km²)": "{:,.0f}", "Points MM": "{:,.0f}",
             "Hab./point MM": "{:,.0f}", "Dist. médiane (km)": "{:,.0f}",
-            "DCPI": "{:.1f}"}), width="stretch", hide_index=True)
+            "DCPI": "{:.1f}"}, thousands=" ", decimal=","), width="stretch", hide_index=True)

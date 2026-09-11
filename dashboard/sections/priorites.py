@@ -38,7 +38,7 @@ def afficher(ctx: dict) -> None:
     stables = set(sens[sens.frequence_top10 >= SEUIL].prefecture)
 
     st.markdown(T.bandeau(
-        "Axes d'analyse", "Territoires prioritaires",
+        "Diagnostic · 04", "Territoires prioritaires",
         "L'indice ne mesure pas « la qualité du numérique ». Il répond à une "
         "question de décision : où un investissement toucherait-il le plus "
         "d'habitants aujourd'hui mal desservis ?"), unsafe_allow_html=True)
@@ -66,88 +66,78 @@ def afficher(ctx: dict) -> None:
     g, d = st.columns([1, 1.1], gap="medium")
 
     with g:
-        st.markdown(T.carte_ouvre("Score de priorité par préfecture"),
-                    unsafe_allow_html=True)
-        st.plotly_chart(
-            cartes.choroplethe(vue, geo, "DCPI", "Score DCPI", ".1f", 560),
-            width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Score de priorité par préfecture"):
+            st.plotly_chart(
+                cartes.choroplethe(vue, geo, "DCPI", "Score DCPI", ".1f", 560),
+                width="stretch", config={"displayModeBar": False})
 
     with d:
-        st.markdown(T.carte_ouvre("Classement · en bleu, les priorités robustes"),
-                    unsafe_allow_html=True)
-        c = vue.nlargest(18, "DCPI").sort_values("DCPI")
-        fig = go.Figure(go.Bar(
-            x=c.DCPI, y=c.prefecture, orientation="h",
-            marker=dict(color=[T.SERIE_1 if p in stables else T.GRIS_FOND
-                               for p in c.prefecture]),
-            text=[f"{v:.1f}" for v in c.DCPI], textposition="outside",
-            textfont=dict(size=10.5, color=T.ENCRE_2),
-            customdata=c[["region", "population", "hab_par_point_mm",
-                          "agences_actives",
-                          "dist_agence_med_canton_km"]].values,
-            hovertemplate=("<b>%{y}</b> — %{customdata[0]}<br><br>"
-                           "Population : %{customdata[1]:,.0f}<br>"
-                           "%{customdata[2]:,.0f} hab. par point<br>"
-                           "Agences actives : %{customdata[3]}<br>"
-                           "Distance médiane : %{customdata[4]:.0f} km"
-                           "<extra></extra>")))
-        fig.update_layout(height=560, showlegend=False,
-                          xaxis_title="Score DCPI", yaxis_title=None,
-                          margin=dict(l=4, r=40, t=6, b=34))
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Classement · en bleu, les priorités robustes"):
+            c = vue.nlargest(18, "DCPI").sort_values("DCPI")
+            fig = go.Figure(go.Bar(
+                x=c.DCPI, y=c.prefecture, orientation="h",
+                marker=dict(color=[T.SERIE_1 if p in stables else T.GRIS_FOND
+                                   for p in c.prefecture]),
+                text=[f"{v:.1f}" for v in c.DCPI], textposition="outside",
+                textfont=dict(size=10.5, color=T.ENCRE_2),
+                customdata=c[["region", "population", "hab_par_point_mm",
+                              "agences_actives",
+                              "dist_agence_med_canton_km"]].values,
+                hovertemplate=("<b>%{y}</b> — %{customdata[0]}<br><br>"
+                               "Population : %{customdata[1]:,.0f}<br>"
+                               "%{customdata[2]:,.0f} hab. par point<br>"
+                               "Agences actives : %{customdata[3]}<br>"
+                               "Distance médiane : %{customdata[4]:.0f} km"
+                               "<extra></extra>")))
+            fig.update_layout(height=560, showlegend=False,
+                              xaxis_title="Score DCPI", yaxis_title=None,
+                              margin=dict(l=4, r=40, t=6, b=34))
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     # ======================================================== sensibilité
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.2rem">'
-                'Robustesse</div>', unsafe_allow_html=True)
+    st.markdown(T.etiquette("Robustesse", "1.2rem"), unsafe_allow_html=True)
     g2, d2 = st.columns([1.3, 1], gap="medium")
 
     with g2:
-        st.markdown(T.carte_ouvre(
-            "Présence dans le top 10 sur 2 000 pondérations aléatoires"),
-            unsafe_allow_html=True)
-        s = sens.head(14).sort_values("frequence_top10")
-        fig2 = go.Figure(go.Bar(
-            x=s.frequence_top10, y=s.prefecture, orientation="h",
-            marker=dict(color=[T.SERIE_1 if f >= SEUIL else T.GRIS_FOND
-                               for f in s.frequence_top10]),
-            text=[f"{f:.0%}" for f in s.frequence_top10],
-            textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
-            customdata=s[["rang_median", "rang_min", "rang_max"]].values,
-            hovertemplate=("<b>%{y}</b><br>Top 10 dans %{x:.0%} des cas<br>"
-                           "Rang médian %{customdata[0]:.0f} "
-                           "(de %{customdata[1]:.0f} à %{customdata[2]:.0f})"
-                           "<extra></extra>")))
-        fig2.add_vline(x=SEUIL, line=dict(color=T.STATUT["critique"], width=1.8))
-        fig2.update_layout(height=420, showlegend=False,
-                           xaxis=dict(tickformat=".0%", range=[0, 1.14]),
-                           xaxis_title=None, yaxis_title=None,
-                           margin=dict(l=4, r=44, t=6, b=24))
-        st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(
+                "Présence dans le top 10 sur 2 000 pondérations aléatoires"):
+            s = sens.head(14).sort_values("frequence_top10")
+            fig2 = go.Figure(go.Bar(
+                x=s.frequence_top10, y=s.prefecture, orientation="h",
+                marker=dict(color=[T.SERIE_1 if f >= SEUIL else T.GRIS_FOND
+                                   for f in s.frequence_top10]),
+                text=[f"{f:.0%}" for f in s.frequence_top10],
+                textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
+                customdata=s[["rang_median", "rang_min", "rang_max"]].values,
+                hovertemplate=("<b>%{y}</b><br>Top 10 dans %{x:.0%} des cas<br>"
+                               "Rang médian %{customdata[0]:.0f} "
+                               "(de %{customdata[1]:.0f} à %{customdata[2]:.0f})"
+                               "<extra></extra>")))
+            fig2.add_vline(x=SEUIL, line=dict(color=T.STATUT["critique"], width=1.8))
+            fig2.update_layout(height=420, showlegend=False,
+                               xaxis=dict(tickformat=".0%", range=[0, 1.14]),
+                               xaxis_title=None, yaxis_title=None,
+                               margin=dict(l=4, r=44, t=6, b=24))
+            st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
 
     with d2:
-        st.markdown(T.carte_ouvre("Variantes méthodologiques"),
-                    unsafe_allow_html=True)
-        t = variantes.copy()
-        t.columns = ["Variante", "Corrélation", "Top 10"]
-        t["Top 10"] = t["Top 10"].map(lambda v: f"{v}/10")
-        st.dataframe(t.style.format({"Corrélation": "{:.3f}"}),
-                     width="stretch", hide_index=True, height=352)
-        st.markdown(
-            T.lecture(
-                "Aucun écrêtage n'a été appliqué : Kpendjal a réellement "
-                "2 155 habitants par point. La variante « rangs », insensible "
-                "aux valeurs extrêmes, donne 0,953 — les extrêmes ne pilotent "
-                "donc pas le classement."), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Variantes méthodologiques"):
+            t = variantes.copy()
+            t.columns = ["Variante", "Corrélation", "Top 10"]
+            t["Top 10"] = t["Top 10"].map(lambda v: f"{v}/10")
+            st.dataframe(t.style.format({"Corrélation": "{:.3f}"}, thousands=" ", decimal=","),
+                         width="stretch", hide_index=True, height=352)
+            st.markdown(
+                T.lecture(
+                    "Aucun écrêtage n'a été appliqué : Kpendjal a réellement "
+                    "2 155 habitants par point. La variante « rangs », insensible "
+                    "aux valeurs extrêmes, donne 0,953 — les extrêmes ne pilotent "
+                    "donc pas le classement."), unsafe_allow_html=True)
 
     # ===================================================== fiche territoire
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.2rem">'
-                'Fiche de territoire</div>', unsafe_allow_html=True)
+    st.markdown(T.etiquette("Fiche de territoire", "1.2rem"), unsafe_allow_html=True)
     ordre = vue.sort_values("DCPI", ascending=False).prefecture.tolist()
     choix = st.selectbox("Préfecture", ordre, index=0,
                          label_visibility="collapsed")
@@ -176,52 +166,48 @@ def afficher(ctx: dict) -> None:
     st.markdown("")
     g3, d3 = st.columns([1, 1.35], gap="medium")
     with g3:
-        st.markdown(T.carte_ouvre("De quoi ce score est-il fait ?"),
+        with T.bloc("De quoi ce score est-il fait ?"):
+            contribs = [(lib, r[col] * poids, coul)
+                        for col, (lib, poids, coul) in COMPOSANTES.items()]
+            total = sum(v for _, v, _ in contribs)
+            fig3 = go.Figure()
+            for lib, val, coul in contribs:
+                fig3.add_trace(go.Bar(
+                    x=[val], y=["Score"], orientation="h", name=lib,
+                    marker=dict(color=coul, line=dict(width=2, color=T.SURFACE)),
+                    text=[f"{val:.1f}"], textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(size=11, color=T.SURFACE),
+                    hovertemplate=f"<b>{lib}</b><br>%{{x:.1f}} points sur "
+                                  f"{total:.1f}<extra></extra>"))
+            fig3.update_layout(barmode="stack", height=170, yaxis_title=None,
+                               xaxis_title=None, margin=dict(l=4, r=4, t=4, b=4),
+                               legend=dict(orientation="h", y=-0.42,
+                                           font=dict(size=10.5)))
+            st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
+            if len(f):
+                fr = f.iloc[0]
+                st.markdown(T.lecture(
+                    f"Sur 2 000 pondérations, <b>{choix}</b> figure dans le top 10 "
+                    f"dans <b>{fr.frequence_top10:.0%}</b> des cas ; son rang varie "
+                    f"de {int(fr.rang_min)} à {int(fr.rang_max)}."),
                     unsafe_allow_html=True)
-        contribs = [(lib, r[col] * poids, coul)
-                    for col, (lib, poids, coul) in COMPOSANTES.items()]
-        total = sum(v for _, v, _ in contribs)
-        fig3 = go.Figure()
-        for lib, val, coul in contribs:
-            fig3.add_trace(go.Bar(
-                x=[val], y=["Score"], orientation="h", name=lib,
-                marker=dict(color=coul, line=dict(width=2, color=T.SURFACE)),
-                text=[f"{val:.1f}"], textposition="inside",
-                insidetextanchor="middle",
-                textfont=dict(size=11, color=T.SURFACE),
-                hovertemplate=f"<b>{lib}</b><br>%{{x:.1f}} points sur "
-                              f"{total:.1f}<extra></extra>"))
-        fig3.update_layout(barmode="stack", height=170, yaxis_title=None,
-                           xaxis_title=None, margin=dict(l=4, r=4, t=4, b=4),
-                           legend=dict(orientation="h", y=-0.42,
-                                       font=dict(size=10.5)))
-        st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
-        if len(f):
-            fr = f.iloc[0]
-            st.markdown(T.lecture(
-                f"Sur 2 000 pondérations, <b>{choix}</b> figure dans le top 10 "
-                f"dans <b>{fr.frequence_top10:.0%}</b> des cas ; son rang varie "
-                f"de {int(fr.rang_min)} à {int(fr.rang_max)}."),
-                unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with d3:
-        st.markdown(T.carte_ouvre(f"Communes de {choix}"),
-                    unsafe_allow_html=True)
-        sous = com[com.prefecture == choix].sort_values("DCPI", ascending=False)
-        t = sous[["rang_DCPI", "commune", "population", "points_mm",
-                  "hab_par_point_mm", "agences_actives", "dist_agence_km",
-                  "DCPI"]].copy()
-        t.columns = ["Rang", "Commune", "Population", "Points MM",
-                     "Hab./point", "Agences", "Dist. (km)", "DCPI"]
-        st.dataframe(t.style.format({
-            "Population": "{:,.0f}", "Points MM": "{:,.0f}",
-            "Hab./point": "{:,.0f}", "Dist. (km)": "{:,.0f}",
-            "DCPI": "{:.1f}", "Rang": "{:.0f}"}),
-            width="stretch", hide_index=True, height=280)
-        st.markdown(T.source(
-            "Rang établi sur les 117 communes. Les scores communaux et "
-            "préfectoraux ne sont pas comparables : la composante "
-            "d'éloignement n'y repose pas sur la même mesure."),
-            unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(f"Communes de {choix}"):
+            sous = com[com.prefecture == choix].sort_values("DCPI", ascending=False)
+            t = sous[["rang_DCPI", "commune", "population", "points_mm",
+                      "hab_par_point_mm", "agences_actives", "dist_agence_km",
+                      "DCPI"]].copy()
+            t.columns = ["Rang", "Commune", "Population", "Points MM",
+                         "Hab./point", "Agences", "Dist. (km)", "DCPI"]
+            st.dataframe(t.style.format({
+                "Population": "{:,.0f}", "Points MM": "{:,.0f}",
+                "Hab./point": "{:,.0f}", "Dist. (km)": "{:,.0f}",
+                "DCPI": "{:.1f}", "Rang": "{:.0f}"}, thousands=" ", decimal=","),
+                width="stretch", hide_index=True, height=280)
+            st.markdown(T.source(
+                "Rang établi sur les 117 communes. Les scores communaux et "
+                "préfectoraux ne sont pas comparables : la composante "
+                "d'éloignement n'y repose pas sur la même mesure."),
+                unsafe_allow_html=True)

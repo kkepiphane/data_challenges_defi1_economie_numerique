@@ -102,7 +102,7 @@ ECARTEES = [
 
 def afficher(ctx: dict) -> None:
     st.markdown(T.bandeau(
-        "Décision", "Méthode & limites",
+        "Décision · 07", "Méthode & limites",
         "D'où viennent ces chiffres, jusqu'où peut-on s'y fier, et que ne "
         "disent-ils pas ?"), unsafe_allow_html=True)
 
@@ -125,13 +125,13 @@ def afficher(ctx: dict) -> None:
 
     # ------------------------------------------------------------- sources
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.1rem">'
-                "D'où viennent les données</div>", unsafe_allow_html=True)
+    st.markdown(T.etiquette("D'où viennent les données", "1.1rem"),
+                unsafe_allow_html=True)
     st.dataframe(SOURCES, width="stretch", hide_index=True)
 
     # ------------------------------------------------------------ confiance
-    st.markdown('<div class="sb-groupe" style="margin-top:1.4rem">'
-                "Pourquoi s'y fier</div>", unsafe_allow_html=True)
+    st.markdown(T.etiquette("Pourquoi s'y fier", "1.4rem"),
+                unsafe_allow_html=True)
     g, d = st.columns([1, 1], gap="medium")
 
     with g:
@@ -163,8 +163,8 @@ def afficher(ctx: dict) -> None:
                 width="stretch", hide_index=True, height=396)
 
     # ------------------------------------------------------------- écartées
-    st.markdown('<div class="sb-groupe" style="margin-top:1.4rem">'
-                "Ce qui a été testé puis écarté</div>", unsafe_allow_html=True)
+    st.markdown(T.etiquette("Ce qui a été testé puis écarté", "1.4rem"),
+                unsafe_allow_html=True)
     st.markdown(
         T.lecture(
             "Une méthode n'est solide que si l'on sait ce qu'elle a refusé de "
@@ -180,8 +180,7 @@ def afficher(ctx: dict) -> None:
             f'{corps}</div></div>', unsafe_allow_html=True)
 
     # -------------------------------------------------------------- limites
-    st.markdown('<div class="sb-groupe" style="margin-top:1.4rem">'
-                "Ce que ces résultats ne disent pas</div>",
+    st.markdown(T.etiquette("Ce que ces résultats ne disent pas", "1.4rem"),
                 unsafe_allow_html=True)
     for titre, corps, coul in LIMITES:
         with st.expander(titre):

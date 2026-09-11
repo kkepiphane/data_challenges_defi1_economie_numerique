@@ -65,7 +65,7 @@ def afficher(ctx: dict) -> None:
     vue = pref[pref.prefecture.isin(ctx["prefectures"])]
 
     st.markdown(T.bandeau(
-        "Décision", "Plan d'action",
+        "Décision · 06", "Plan d'action",
         "Quelles interventions les déficits mesurés appellent-ils, sur quels "
         "territoires, et pour combien d'habitants ?"), unsafe_allow_html=True)
 
@@ -104,65 +104,57 @@ def afficher(ctx: dict) -> None:
 
     # ================================================= séquence proposée
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.1rem">'
-                'Séquence proposée</div>', unsafe_allow_html=True)
+    st.markdown(T.etiquette("Séquence proposée", "1.1rem"), unsafe_allow_html=True)
 
     g, d = st.columns([1.25, 1], gap="medium")
 
     with g:
-        st.markdown(T.carte_ouvre(
-            "Les dix premiers territoires et leur levier dominant"),
-            unsafe_allow_html=True)
-        for _, r in pref.nsmallest(10, "rang_DCPI").sort_values(
-                "rang_DCPI").iterrows():
-            mes = actions[actions.prefecture == r.prefecture]
-            puces = " &nbsp;·&nbsp; ".join(
-                f'<span style="color:{c}">●</span> {n}'
-                for n, c in zip(mes.levier, mes.couleur))
-            detail = (
-                f"<b>{int(r.population):,}</b> hab. &nbsp;·&nbsp; "
-                f"<b>{r.hab_par_point_mm:,.0f}</b> hab./point &nbsp;·&nbsp; "
-                f"<b>{int(r.agences_actives)}</b> agence(s) &nbsp;·&nbsp; "
-                f"<b>{r.dist_agence_med_canton_km:.0f} km</b><br>"
-                f'<span style="font-size:0.76rem">{puces}</span>'
-            ).replace(",", " ")
-            st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),
-                        unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Les dix premiers territoires et leur levier dominant"):
+            for _, r in pref.nsmallest(10, "rang_DCPI").sort_values(
+                    "rang_DCPI").iterrows():
+                mes = actions[actions.prefecture == r.prefecture]
+                puces = " &nbsp;·&nbsp; ".join(
+                    f'<span style="color:{c}">●</span> {n}'
+                    for n, c in zip(mes.levier, mes.couleur))
+                detail = (
+                    f"<b>{int(r.population):,}</b> hab. &nbsp;·&nbsp; "
+                    f"<b>{r.hab_par_point_mm:,.0f}</b> hab./point &nbsp;·&nbsp; "
+                    f"<b>{int(r.agences_actives)}</b> agence(s) &nbsp;·&nbsp; "
+                    f"<b>{r.dist_agence_med_canton_km:.0f} km</b><br>"
+                    f'<span style="font-size:0.76rem">{puces}</span>'
+                ).replace(",", " ")
+                st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),
+                            unsafe_allow_html=True)
 
     with d:
-        st.markdown(T.carte_ouvre(
-            "Population atteinte par levier · territoires prioritaires"),
-            unsafe_allow_html=True)
-        par_levier = (actions[actions.prioritaire].groupby("levier")
-                      .agg(population=("population", "sum"),
-                           n=("prefecture", "nunique"),
-                           couleur=("couleur", "first"))
-                      .reset_index().sort_values("population"))
-        fig = go.Figure(go.Bar(
-            x=par_levier.population, y=par_levier.levier, orientation="h",
-            marker=dict(color=par_levier.couleur),
-            text=[f"{int(v):,}".replace(",", " ") for v in par_levier.population],
-            textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
-            customdata=par_levier.n,
-            hovertemplate=("<b>%{y}</b><br>%{x:,.0f} habitants<br>"
-                           "%{customdata} préfecture(s)<extra></extra>")))
-        fig.update_layout(height=340, showlegend=False,
-                          xaxis_title="Habitants concernés", yaxis_title=None,
-                          margin=dict(l=4, r=90, t=6, b=34))
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-        st.markdown(
-            T.action(
-                "Un même territoire peut relever de plusieurs leviers : les "
-                "populations ne s'additionnent donc pas d'une barre à "
-                "l'autre."), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(
+                "Population atteinte par levier · territoires prioritaires"):
+            par_levier = (actions[actions.prioritaire].groupby("levier")
+                          .agg(population=("population", "sum"),
+                               n=("prefecture", "nunique"),
+                               couleur=("couleur", "first"))
+                          .reset_index().sort_values("population"))
+            fig = go.Figure(go.Bar(
+                x=par_levier.population, y=par_levier.levier, orientation="h",
+                marker=dict(color=par_levier.couleur),
+                text=[f"{int(v):,}".replace(",", " ") for v in par_levier.population],
+                textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
+                customdata=par_levier.n,
+                hovertemplate=("<b>%{y}</b><br>%{x:,.0f} habitants<br>"
+                               "%{customdata} préfecture(s)<extra></extra>")))
+            fig.update_layout(height=340, showlegend=False,
+                              xaxis_title="Habitants concernés", yaxis_title=None,
+                              margin=dict(l=4, r=90, t=6, b=34))
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.markdown(
+                T.action(
+                    "Un même territoire peut relever de plusieurs leviers : les "
+                    "populations ne s'additionnent donc pas d'une barre à "
+                    "l'autre."), unsafe_allow_html=True)
 
     # ================================================= détail des leviers
     st.markdown("")
-    st.markdown('<div class="sb-groupe" style="margin-top:1.1rem">'
-                'Les cinq leviers, et ce qui les déclenche</div>',
-                unsafe_allow_html=True)
+    st.markdown(T.etiquette("Les cinq leviers, et ce qui les déclenche", "1.1rem"), unsafe_allow_html=True)
 
     cols = st.columns(len(LEVIERS), gap="small")
     for col, (nom, cond, seuil, coul, delai, pourquoi) in zip(cols, LEVIERS):
@@ -195,7 +187,7 @@ def afficher(ctx: dict) -> None:
         t = t.rename(columns={"rang": "Rang", "prefecture": "Préfecture",
                               "region": "Région", "population": "Population"})
         st.dataframe(t.style.format({"Population": "{:,.0f}",
-                                     "Rang": "{:.0f}"}),
+                                     "Rang": "{:.0f}"}, thousands=" ", decimal=","),
                      width="stretch", hide_index=True)
 
     st.markdown(

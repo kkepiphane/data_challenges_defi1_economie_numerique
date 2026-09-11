@@ -51,11 +51,20 @@ COMPOSANTES = [
      "Population concernée : à déficit égal, le nombre d'habitants tranche."),
 ]
 
+# Departs rapides : (poids, ce que ce reglage privilegie).
 PRESETS = {
-    "Référence": (30, 25, 25, 20),
-    "Poids égaux": (25, 25, 25, 25),
-    "Priorité à l'éloignement": (20, 20, 45, 15),
-    "Priorité au nombre d'habitants": (25, 15, 15, 45),
+    "Référence": ((30, 25, 25, 20),
+                  "Les poids publiés par la chaîne d'analyse."),
+    "Poids égaux": ((25, 25, 25, 25),
+                    "Aucune composante privilégiée — le test le plus sévère."),
+    # Libelles courts : quatre boutons partagent la largeur d'une colonne, et
+    # un mot long s'y couperait en plein milieu. Le detail est en infobulle.
+    "Distance": ((20, 20, 45, 15),
+                 "Éloignement d'abord : priorité aux territoires les plus "
+                 "isolés d'un guichet."),
+    "Population": ((25, 15, 15, 45),
+                   "Enjeu démographique d'abord : priorité au nombre "
+                   "d'habitants effectivement touchés."),
 }
 
 SEUIL_ROBUSTE = 0.90
@@ -99,32 +108,34 @@ def afficher(ctx: dict) -> None:
     robustes = set(sens[sens.frequence_top10 >= SEUIL_ROBUSTE].prefecture)
 
     st.markdown(T.bandeau(
-        "Décision", "Arbitrage",
+        "Décision · 05", "Arbitrage",
         "Le classement dépend de ce que vous décidez de faire compter. "
         "Réglez les quatre poids, observez ce qui bouge — puis convertissez "
         "un objectif de desserte en nombre de points à ouvrir."),
         unsafe_allow_html=True)
 
     # =========================================================== 1. PONDERATION
-    st.markdown('<div class="sb-groupe">1 · Ce que vous faites compter</div>',
-                unsafe_allow_html=True)
+    st.markdown(T.etiquette("1 · Ce que vous faites compter"), unsafe_allow_html=True)
 
     for cle, _, defaut, _, _ in COMPOSANTES:
         st.session_state.setdefault(f"poids_{cle}", defaut)
 
     reglages, effet = st.columns([1, 1.55], gap="medium")
 
-    with reglages:
-        st.markdown(T.carte_ouvre("Pondération des quatre composantes"),
-                    unsafe_allow_html=True)
-        choix = st.radio("Départs rapides", list(PRESETS), horizontal=True,
-                         label_visibility="collapsed", index=None,
-                         key="preset_poids")
-        if choix:
-            for (cle, _, _, _, _), v in zip(COMPOSANTES, PRESETS[choix]):
-                st.session_state[f"poids_{cle}"] = v
-            st.session_state.preset_poids = None
-            st.rerun()
+    with reglages, T.bloc("Pondération des quatre composantes"):
+        # Des BOUTONS, et non un groupe radio : le depart rapide est une
+        # action, pas un etat a conserver. Un radio aurait fallu remettre a
+        # blanc apres usage — or Streamlit interdit d'ecrire dans l'etat d'un
+        # widget une fois celui-ci instancie dans le rendu courant.
+        # Les boutons, eux, precedent les curseurs : au moment ou ils fixent
+        # les poids, aucun curseur n'existe encore dans ce rendu.
+        depart = st.columns(len(PRESETS), gap="small")
+        for colonne, (nom, (valeurs, aide)) in zip(depart, PRESETS.items()):
+            if colonne.button(nom, key=f"preset_{nom}", help=aide,
+                              width="stretch"):
+                for (cle, *_), v in zip(COMPOSANTES, valeurs):
+                    st.session_state[f"poids_{cle}"] = v
+                st.rerun()
 
         poids = {}
         for cle, libelle, defaut, couleur, aide in COMPOSANTES:
@@ -138,48 +149,52 @@ def afficher(ctx: dict) -> None:
         st.markdown(T.source(
             "Poids effectifs, ramenés à 100 % : " + parts),
             unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
     classe = _reponderer(pref, poids)
     reference = set(pref.nsmallest(10, "rang_DCPI").prefecture)
     nouveau = set(classe.head(10).prefecture)
-    spearman = pref.rang_DCPI.corr(classe.set_index(pref.index).rang_perso,
-                                   method="spearman")
+    # L'appariement se fait sur le NOM du territoire, jamais sur la position :
+    # `classe` est trie par le rang repondere, donc sa n-ieme ligne ne decrit
+    # pas la meme prefecture que la n-ieme ligne de `pref`. Comparer les deux
+    # colonnes dans l'ordre revient a correler des paires sans rapport — et
+    # produit une correlation quelconque la ou elle doit valoir exactement 1.
+    apparie = pref[["prefecture", "rang_DCPI"]].merge(
+        classe[["prefecture", "rang_perso"]], on="prefecture", how="inner")
+    assert len(apparie) == len(pref), "appariement incomplet des préfectures"
+    spearman = apparie.rang_DCPI.corr(apparie.rang_perso, method="spearman")
     identiques = len(reference & nouveau)
     robustes_tenus = len(robustes & nouveau)
 
     with effet:
-        st.markdown(T.carte_ouvre("Effet sur le classement"),
-                    unsafe_allow_html=True)
-        k = st.columns(3, gap="small")
-        k[0].markdown(T.kpi(
-            "Top 10 inchangé", f"{identiques}", "/ 10",
-            "territoires communs avec la pondération de référence",
-            T.VERT if identiques >= 8 else T.STATUT["attention"]),
-            unsafe_allow_html=True)
-        k[1].markdown(T.kpi(
-            "Corrélation des rangs", f"{spearman:.3f}".replace(".", ","), "",
-            "Spearman, sur les 39 préfectures",
-            T.STATUT["bon"] if spearman >= 0.9 else T.STATUT["attention"]),
-            unsafe_allow_html=True)
-        k[2].markdown(T.kpi(
-            "Priorités robustes retenues", f"{robustes_tenus}",
-            f"/ {len(robustes)}",
-            "parmi les 9 stables sur 2 000 pondérations", T.SERIE_1),
-            unsafe_allow_html=True)
+        with T.bloc("Effet sur le classement"):
+            k = st.columns(3, gap="small")
+            k[0].markdown(T.kpi(
+                "Top 10 inchangé", f"{identiques}", "/ 10",
+                "territoires communs avec la pondération de référence",
+                T.VERT if identiques >= 8 else T.STATUT["attention"]),
+                unsafe_allow_html=True)
+            k[1].markdown(T.kpi(
+                "Corrélation des rangs", f"{spearman:.3f}".replace(".", ","), "",
+                "Spearman, sur les 39 préfectures",
+                T.STATUT["bon"] if spearman >= 0.9 else T.STATUT["attention"]),
+                unsafe_allow_html=True)
+            k[2].markdown(T.kpi(
+                "Priorités robustes retenues", f"{robustes_tenus}",
+                f"/ {len(robustes)}",
+                "parmi les 9 stables sur 2 000 pondérations", T.SERIE_1),
+                unsafe_allow_html=True)
 
-        st.markdown("")
-        haut = classe.head(12)[
-            ["rang_perso", "rang_DCPI", "mouvement", "prefecture", "region",
-             "population", "DCPI_perso"]].copy()
-        haut["mouvement"] = haut.mouvement.map(
-            lambda m: "—" if m == 0 else (f"▲ {m}" if m > 0 else f"▼ {-m}"))
-        haut.columns = ["Rang", "Réf.", "Écart", "Préfecture", "Région",
-                        "Population", "Score"]
-        st.dataframe(haut.style.format({"Population": "{:,.0f}",
-                                        "Score": "{:.1f}"}),
-                     width="stretch", hide_index=True, height=458)
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("")
+            haut = classe.head(12)[
+                ["rang_perso", "rang_DCPI", "mouvement", "prefecture", "region",
+                 "population", "DCPI_perso"]].copy()
+            haut["mouvement"] = haut.mouvement.map(
+                lambda m: "—" if m == 0 else (f"▲ {m}" if m > 0 else f"▼ {-m}"))
+            haut.columns = ["Rang", "Réf.", "Écart", "Préfecture", "Région",
+                            "Population", "Score"]
+            st.dataframe(haut.style.format({"Population": "{:,.0f}",
+                                            "Score": "{:.1f}"}, thousands=" ", decimal=","),
+                         width="stretch", hide_index=True, height=458)
 
     message = (
         f"Avec vos poids, <b>{identiques} des 10</b> territoires prioritaires "
@@ -195,29 +210,25 @@ def afficher(ctx: dict) -> None:
     st.markdown(T.action(message), unsafe_allow_html=True)
 
     # ============================================================ 2. COUVERTURE
-    st.markdown('<div class="sb-groupe" style="margin-top:1.5rem">'
-                '2 · Ce que cela demanderait d\'équiper</div>',
-                unsafe_allow_html=True)
+    st.markdown(T.etiquette("2 · Ce que cela demanderait d'équiper", "1.5rem"), unsafe_allow_html=True)
 
     cadrage, resultat = st.columns([1, 1.55], gap="medium")
 
     with cadrage:
-        st.markdown(T.carte_ouvre("Hypothèses de l'exercice"),
-                    unsafe_allow_html=True)
-        objectif = st.slider(
-            "Objectif : habitants par point de service", 150, 900, 409, 10,
-            help="409 est la moyenne nationale actuelle. Viser plus bas, "
-                 "c'est viser mieux que la moyenne d'aujourd'hui.")
-        combien = st.slider(
-            "Nombre de territoires retenus", 1, 39, min(9, len(classe)),
-            help="Les N premiers du classement que vous venez de régler.")
-        st.markdown(T.lecture(
-            "Une seule règle, arithmétique : atteindre un point pour "
-            f"<b>{objectif}</b> habitants sur un territoire de P habitants "
-            f"demande ⌈P / {objectif}⌉ points. L'existant est déduit. "
-            "Aucun coût n'est produit ici — <b>les prix ne figurent dans "
-            "aucune source du projet</b>."), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Hypothèses de l'exercice"):
+            objectif = st.slider(
+                "Objectif : habitants par point de service", 150, 900, 409, 10,
+                help="409 est la moyenne nationale actuelle. Viser plus bas, "
+                     "c'est viser mieux que la moyenne d'aujourd'hui.")
+            combien = st.slider(
+                "Nombre de territoires retenus", 1, 39, min(9, len(classe)),
+                help="Les N premiers du classement que vous venez de régler.")
+            st.markdown(T.lecture(
+                "Une seule règle, arithmétique : atteindre un point pour "
+                f"<b>{objectif}</b> habitants sur un territoire de P habitants "
+                f"demande ⌈P / {objectif}⌉ points. L'existant est déduit. "
+                "Aucun coût n'est produit ici — <b>les prix ne figurent dans "
+                "aucune source du projet</b>."), unsafe_allow_html=True)
 
     plan = _plan_couverture(classe.head(combien), objectif)
     pop_touchee = int(plan.population.sum())
@@ -226,56 +237,55 @@ def afficher(ctx: dict) -> None:
     parc = int(pref.points_mm.sum())
 
     with resultat:
-        st.markdown(T.carte_ouvre(
-            f"Ce que représenterait l'objectif sur {combien} territoire"
-            f"{'s' if combien > 1 else ''}"), unsafe_allow_html=True)
-        k2 = st.columns(4, gap="small")
-        k2[0].markdown(T.kpi(
-            "Population atteinte", f"{pop_touchee:,}".replace(",", " "), "",
-            f"{pop_touchee / D.POPULATION_NATIONALE:.0%} de la population "
-            "nationale", T.VERT), unsafe_allow_html=True)
-        k2[1].markdown(T.kpi(
-            "Points à ouvrir", f"{a_creer:,}".replace(",", " "), "",
-            f"+{a_creer / parc:.0%} du parc national actuel", T.SERIE_1),
-            unsafe_allow_html=True)
-        k2[2].markdown(T.kpi(
-            "Guichets d'opérateur à implanter", f"{guichets}", "",
-            "territoires retenus sans aucune agence active", T.SERIE_2),
-            unsafe_allow_html=True)
-        k2[3].markdown(T.kpi(
-            "Effort par habitant atteint",
-            f"{a_creer / max(pop_touchee, 1) * 10000:,.1f}".replace(".", ","),
-            "pts/10 000 hab.", "mesure la concentration de l'effort",
-            T.SERIE_3), unsafe_allow_html=True)
+        with T.bloc(
+                f"Ce que représenterait l'objectif sur {combien} territoire"
+                f"{'s' if combien > 1 else ''}"):
+            k2 = st.columns(4, gap="small")
+            k2[0].markdown(T.kpi(
+                "Population atteinte", f"{pop_touchee:,}".replace(",", " "), "",
+                f"{pop_touchee / D.POPULATION_NATIONALE:.0%} de la population "
+                "nationale", T.VERT), unsafe_allow_html=True)
+            k2[1].markdown(T.kpi(
+                "Points à ouvrir", f"{a_creer:,}".replace(",", " "), "",
+                f"+{a_creer / parc:.0%} du parc national actuel", T.SERIE_1),
+                unsafe_allow_html=True)
+            k2[2].markdown(T.kpi(
+                "Guichets d'opérateur à implanter", f"{guichets}", "",
+                "territoires retenus sans aucune agence active", T.SERIE_2),
+                unsafe_allow_html=True)
+            k2[3].markdown(T.kpi(
+                "Effort par habitant atteint",
+                f"{a_creer / max(pop_touchee, 1) * 10000:,.1f}".replace(".", ","),
+                "pts/10 000 hab.", "mesure la concentration de l'effort",
+                T.SERIE_3), unsafe_allow_html=True)
 
-        st.markdown("")
-        courbe = _plan_couverture(classe, objectif)
-        cum_pop = courbe.population.cumsum() / D.POPULATION_NATIONALE
-        cum_pts = courbe.points_a_creer.cumsum()
-        import plotly.graph_objects as go
-        fig = go.Figure(go.Scatter(
-            x=cum_pts, y=cum_pop, mode="lines",
-            line=dict(color=T.SERIE_1, width=2.2),
-            hovertemplate=("%{x:,.0f} points à ouvrir<br>"
-                           "%{y:.1%} de la population<extra></extra>")))
-        fig.add_trace(go.Scatter(
-            x=[cum_pts.iloc[combien - 1]], y=[cum_pop.iloc[combien - 1]],
-            mode="markers+text", marker=dict(color=T.STATUT["critique"], size=11),
-            text=[f"  {combien} territoires"], textposition="middle right",
-            textfont=dict(size=11, color=T.ENCRE),
-            hovertemplate="<extra></extra>", showlegend=False))
-        fig.update_layout(
-            height=250, showlegend=False,
-            xaxis_title="Points de service à ouvrir, cumulés",
-            yaxis=dict(tickformat=".0%", title="Population atteinte"),
-            margin=dict(l=4, r=80, t=10, b=34))
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-        st.markdown(T.source(
-            "Lecture : la pente s'aplatit quand on descend le classement — "
-            "les premiers territoires coûtent peu de points pour beaucoup "
-            "d'habitants atteints. C'est l'argument chiffré du ciblage."),
-            unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("")
+            courbe = _plan_couverture(classe, objectif)
+            cum_pop = courbe.population.cumsum() / D.POPULATION_NATIONALE
+            cum_pts = courbe.points_a_creer.cumsum()
+            import plotly.graph_objects as go
+            fig = go.Figure(go.Scatter(
+                x=cum_pts, y=cum_pop, mode="lines",
+                line=dict(color=T.SERIE_1, width=2.2),
+                hovertemplate=("%{x:,.0f} points à ouvrir<br>"
+                               "%{y:.1%} de la population<extra></extra>")))
+            fig.add_trace(go.Scatter(
+                x=[cum_pts.iloc[combien - 1]], y=[cum_pop.iloc[combien - 1]],
+                mode="markers+text", marker=dict(color=T.STATUT["critique"], size=11),
+                text=[f"  {combien} territoires"], textposition="middle right",
+                textfont=dict(size=11, color=T.ENCRE),
+                hovertemplate="<extra></extra>", showlegend=False))
+            fig.update_layout(
+                height=250, showlegend=False,
+                xaxis_title="Points de service à ouvrir, cumulés",
+                yaxis=dict(tickformat=".0%", title="Population atteinte"),
+                margin=dict(l=4, r=80, t=10, b=34))
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.markdown(T.source(
+                "Lecture : la pente s'aplatit quand on descend le classement — "
+                "les premiers territoires coûtent peu de points pour beaucoup "
+                "d'habitants atteints. C'est l'argument chiffré du ciblage."),
+                unsafe_allow_html=True)
 
     # ------------------------------------------------------------ le detail
     st.markdown("")
@@ -286,19 +296,16 @@ def afficher(ctx: dict) -> None:
     detail.columns = ["Rang", "Préfecture", "Région", "Population",
                       "Hab./point", "Points existants", "Points cibles",
                       "Points à ouvrir", "Agences", "Dist. méd. (km)", "Score"]
-    st.markdown(T.carte_ouvre("Plan de couverture, territoire par territoire"),
-                unsafe_allow_html=True)
-    st.dataframe(detail.style.format({
-        "Population": "{:,.0f}", "Hab./point": "{:,.0f}",
-        "Points existants": "{:,.0f}", "Points cibles": "{:,.0f}",
-        "Points à ouvrir": "{:,.0f}", "Dist. méd. (km)": "{:,.0f}",
-        "Score": "{:.1f}"}), width="stretch", hide_index=True,
-        height=min(430, 40 + 35 * len(detail)))
-    st.markdown("</div>", unsafe_allow_html=True)
+    with T.bloc("Plan de couverture, territoire par territoire"):
+        st.dataframe(detail.style.format({
+            "Population": "{:,.0f}", "Hab./point": "{:,.0f}",
+            "Points existants": "{:,.0f}", "Points cibles": "{:,.0f}",
+            "Points à ouvrir": "{:,.0f}", "Dist. méd. (km)": "{:,.0f}",
+            "Score": "{:.1f}"}, thousands=" ", decimal=","), width="stretch", hide_index=True,
+            height=min(430, 40 + 35 * len(detail)))
 
     # =============================================================== 3. EMPORTER
-    st.markdown('<div class="sb-groupe" style="margin-top:1.5rem">'
-                '3 · Emporter le résultat</div>', unsafe_allow_html=True)
+    st.markdown(T.etiquette("3 · Emporter le résultat", "1.5rem"), unsafe_allow_html=True)
     st.markdown(T.lecture(
         "Les trois fichiers ci-dessous portent <b>vos</b> réglages, pas ceux "
         "par défaut : ils sont régénérés à chaque mouvement d'un curseur. "

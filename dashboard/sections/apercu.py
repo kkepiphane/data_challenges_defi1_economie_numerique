@@ -26,7 +26,7 @@ def afficher(ctx: dict) -> None:
     geo = D.geojson_prefectures()
 
     st.markdown(T.bandeau(
-        "Synthèse nationale", "Vue d'ensemble",
+        "Diagnostic · 01", "Vue d'ensemble",
         "Où faut-il investir en priorité pour réduire les inégalités d'accès "
         "aux télécommunications et aux services numériques au Togo ?"),
         unsafe_allow_html=True)
@@ -61,13 +61,11 @@ def afficher(ctx: dict) -> None:
             unsafe_allow_html=True)
 
     with d:
-        st.markdown(T.carte_ouvre("Priorité d'intervention par préfecture"),
-                    unsafe_allow_html=True)
-        fig = cartes.choroplethe(vue, geo, "DCPI", "Score DCPI",
-                                 format_valeur=".1f", hauteur=372)
-        st.plotly_chart(fig, width="stretch",
-                        config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Priorité d'intervention par préfecture"):
+            fig = cartes.choroplethe(vue, geo, "DCPI", "Score DCPI",
+                                     format_valeur=".1f", hauteur=372)
+            st.plotly_chart(fig, width="stretch",
+                            config={"displayModeBar": False})
 
     # ================================================================ KPI
     st.markdown("")
@@ -94,49 +92,45 @@ def afficher(ctx: dict) -> None:
     g2, d2 = st.columns([1.28, 1], gap="medium")
 
     with g2:
-        st.markdown(T.carte_ouvre("Les cinq territoires prioritaires"),
-                    unsafe_allow_html=True)
-        for _, r in top.iterrows():
-            detail = (
-                f"<b>{int(r.population):,}</b> habitants &nbsp;·&nbsp; "
-                f"<b>{r.hab_par_point_mm:,.0f}</b> hab./point &nbsp;·&nbsp; "
-                f"<b>{int(r.agences_actives)}</b> agence"
-                f"{'s' if r.agences_actives > 1 else ''} &nbsp;·&nbsp; "
-                f"agence la plus proche à <b>{r.dist_agence_med_canton_km:.0f} km</b>"
-            ).replace(",", " ")
-            st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),
-                        unsafe_allow_html=True)
-        st.markdown(
-            T.action(
-                "Ces cinq territoires restent dans les dix premiers pour "
-                "<b>au moins 91 % de 2 000 pondérations testées</b>. Leur "
-                "priorité ne dépend donc pas des choix méthodologiques."),
-            unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Les cinq territoires prioritaires"):
+            for _, r in top.iterrows():
+                detail = (
+                    f"<b>{int(r.population):,}</b> habitants &nbsp;·&nbsp; "
+                    f"<b>{r.hab_par_point_mm:,.0f}</b> hab./point &nbsp;·&nbsp; "
+                    f"<b>{int(r.agences_actives)}</b> agence"
+                    f"{'s' if r.agences_actives > 1 else ''} &nbsp;·&nbsp; "
+                    f"agence la plus proche à <b>{r.dist_agence_med_canton_km:.0f} km</b>"
+                ).replace(",", " ")
+                st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),
+                            unsafe_allow_html=True)
+            st.markdown(
+                T.action(
+                    "Ces cinq territoires restent dans les dix premiers pour "
+                    "<b>au moins 91 % de 2 000 pondérations testées</b>. Leur "
+                    "priorité ne dépend donc pas des choix méthodologiques."),
+                unsafe_allow_html=True)
 
     with d2:
-        st.markdown(T.carte_ouvre("Écart à la moyenne nationale"),
-                    unsafe_allow_html=True)
-        c = vue.dropna(subset=["hab_par_point_mm"]).nlargest(12, "hab_par_point_mm")
-        c = c.sort_values("hab_par_point_mm")
-        prio = set(top.prefecture)
-        fig2 = go.Figure(go.Bar(
-            x=c.hab_par_point_mm, y=c.prefecture, orientation="h",
-            marker=dict(color=[T.SERIE_1 if p in prio else T.GRIS_FOND
-                               for p in c.prefecture]),
-            text=[f"×{v / national:.1f}" for v in c.hab_par_point_mm],
-            textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
-            hovertemplate=("<b>%{y}</b><br>%{x:,.0f} habitants par point"
-                           "<extra></extra>")))
-        fig2.add_vline(x=national, line=dict(color=T.STATUT["critique"], width=1.8))
-        fig2.update_layout(
-            height=372, showlegend=False,
-            xaxis_title="Habitants par point Mobile Money",
-            yaxis_title=None, margin=dict(l=4, r=42, t=4, b=34))
-        st.plotly_chart(fig2, width="stretch",
-                        config={"displayModeBar": False})
-        st.markdown(
-            T.source("Trait rouge : moyenne nationale de "
-                     f"{national:,.0f} habitants par point."
-                     .replace(",", " ")), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Écart à la moyenne nationale"):
+            c = vue.dropna(subset=["hab_par_point_mm"]).nlargest(12, "hab_par_point_mm")
+            c = c.sort_values("hab_par_point_mm")
+            prio = set(top.prefecture)
+            fig2 = go.Figure(go.Bar(
+                x=c.hab_par_point_mm, y=c.prefecture, orientation="h",
+                marker=dict(color=[T.SERIE_1 if p in prio else T.GRIS_FOND
+                                   for p in c.prefecture]),
+                text=[f"×{v / national:.1f}" for v in c.hab_par_point_mm],
+                textposition="outside", textfont=dict(size=10.5, color=T.ENCRE_2),
+                hovertemplate=("<b>%{y}</b><br>%{x:,.0f} habitants par point"
+                               "<extra></extra>")))
+            fig2.add_vline(x=national, line=dict(color=T.STATUT["critique"], width=1.8))
+            fig2.update_layout(
+                height=372, showlegend=False,
+                xaxis_title="Habitants par point Mobile Money",
+                yaxis_title=None, margin=dict(l=4, r=42, t=4, b=34))
+            st.plotly_chart(fig2, width="stretch",
+                            config={"displayModeBar": False})
+            st.markdown(
+                T.source("Trait rouge : moyenne nationale de "
+                         f"{national:,.0f} habitants par point."
+                         .replace(",", " ")), unsafe_allow_html=True)

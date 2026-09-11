@@ -34,7 +34,7 @@ def afficher(ctx: dict) -> None:
     vue = pref[pref.prefecture.isin(ctx["prefectures"])].copy()
 
     st.markdown(T.bandeau(
-        "Axes d'analyse", "Desserte & population",
+        "Diagnostic · 03", "Desserte & population",
         "Les services numériques sont-ils répartis à la mesure de la "
         "population, ou concentrés sur une fraction du pays ?"),
         unsafe_allow_html=True)
@@ -76,77 +76,73 @@ def afficher(ctx: dict) -> None:
     g, d = st.columns([1.45, 1], gap="medium")
 
     with g:
-        st.markdown(T.carte_ouvre(
-            "Population élevée et desserte faible · le quadrant critique"),
-            unsafe_allow_html=True)
-        fig = go.Figure()
-        for etat, couleur, nom in ((False, T.GRIS_FOND, "Autres préfectures"),
-                                   (True, T.SERIE_1,
-                                    "Population et déficit élevés")):
-            s = c[c.critique == etat]
-            if s.empty:
-                continue
-            fig.add_trace(go.Scatter(
-                x=s.population, y=s.hab_par_point_mm, mode="markers+text",
-                marker=dict(size=12, color=couleur,
-                            line=dict(width=2, color=T.SURFACE)),
-                text=[n if e else "" for n, e in zip(s.prefecture, s.critique)],
-                textposition="top center",
-                textfont=dict(size=10, color=T.ENCRE_2),
-                name=nom,
-                customdata=np.stack([s.prefecture, s.region,
-                                     s.agences_actives], axis=-1),
-                hovertemplate=("<b>%{customdata[0]}</b> — %{customdata[1]}<br>"
-                               "Population : %{x:,.0f}<br>"
-                               "%{y:,.0f} habitants par point<br>"
-                               "Agences actives : %{customdata[2]}"
-                               "<extra></extra>")))
-        fig.add_hline(y=national, line=dict(color=T.AXE, width=1.2))
-        fig.add_vline(x=med_pop, line=dict(color=T.AXE, width=1.2))
-        fig.update_layout(
-            height=470, xaxis_type="log",
-            xaxis_title="Population (échelle logarithmique)",
-            yaxis_title="Habitants par point Mobile Money",
-            margin=dict(l=4, r=4, t=6, b=36))
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-        st.markdown(
-            T.lecture(
-                f"<b>{len(quadrant)} préfectures</b> sont à la fois plus "
-                "peuplées que la médiane nationale et moins bien desservies "
-                "que la moyenne. Ce sont elles qu'un investissement toucherait "
-                "le plus efficacement. L'axe des abscisses est logarithmique — "
-                "sans quoi le Golfe et ses 1,3 million d'habitants écraserait "
-                "les 38 autres."), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc(
+                "Population élevée et desserte faible · le quadrant critique"):
+            fig = go.Figure()
+            for etat, couleur, nom in ((False, T.GRIS_FOND, "Autres préfectures"),
+                                       (True, T.SERIE_1,
+                                        "Population et déficit élevés")):
+                s = c[c.critique == etat]
+                if s.empty:
+                    continue
+                fig.add_trace(go.Scatter(
+                    x=s.population, y=s.hab_par_point_mm, mode="markers+text",
+                    marker=dict(size=12, color=couleur,
+                                line=dict(width=2, color=T.SURFACE)),
+                    text=[n if e else "" for n, e in zip(s.prefecture, s.critique)],
+                    textposition="top center",
+                    textfont=dict(size=10, color=T.ENCRE_2),
+                    name=nom,
+                    customdata=np.stack([s.prefecture, s.region,
+                                         s.agences_actives], axis=-1),
+                    hovertemplate=("<b>%{customdata[0]}</b> — %{customdata[1]}<br>"
+                                   "Population : %{x:,.0f}<br>"
+                                   "%{y:,.0f} habitants par point<br>"
+                                   "Agences actives : %{customdata[2]}"
+                                   "<extra></extra>")))
+            fig.add_hline(y=national, line=dict(color=T.AXE, width=1.2))
+            fig.add_vline(x=med_pop, line=dict(color=T.AXE, width=1.2))
+            fig.update_layout(
+                height=470, xaxis_type="log",
+                xaxis_title="Population (échelle logarithmique)",
+                yaxis_title="Habitants par point Mobile Money",
+                margin=dict(l=4, r=4, t=6, b=36))
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.markdown(
+                T.lecture(
+                    f"<b>{len(quadrant)} préfectures</b> sont à la fois plus "
+                    "peuplées que la médiane nationale et moins bien desservies "
+                    "que la moyenne. Ce sont elles qu'un investissement toucherait "
+                    "le plus efficacement. L'axe des abscisses est logarithmique — "
+                    "sans quoi le Golfe et ses 1,3 million d'habitants écraserait "
+                    "les 38 autres."), unsafe_allow_html=True)
 
     with d:
-        st.markdown(T.carte_ouvre("Concentration de l'équipement"),
-                    unsafe_allow_html=True)
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(
-            x=[0, 1], y=[0, 1], mode="lines",
-            name="Répartition proportionnelle",
-            line=dict(color=T.AXE, width=1.8)))
-        fig2.add_trace(go.Scatter(
-            x=cum_pop, y=cum_mm, mode="lines", name="Répartition observée",
-            line=dict(color=T.SERIE_1, width=2.6),
-            fill="tonexty", fillcolor="rgba(42,120,214,0.09)",
-            hovertemplate=("%{x:.0%} de la population cumulée<br>"
-                           "%{y:.0%} des points<extra></extra>")))
-        fig2.update_layout(
-            height=470, xaxis_title="Part cumulée de la population",
-            yaxis_title="Part cumulée des points Mobile Money",
-            xaxis=dict(tickformat=".0%"), yaxis=dict(tickformat=".0%"),
-            margin=dict(l=4, r=4, t=6, b=36))
-        st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
-        st.markdown(
-            T.lecture(
-                "Les préfectures sont classées du plus faible au plus fort "
-                "taux d'équipement par habitant. L'écart à la diagonale "
-                "mesure l'inégalité. <b>Transformation de présentation</b> "
-                "appliquée à des valeurs déjà contrôlées."),
-            unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Concentration de l'équipement"):
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(
+                x=[0, 1], y=[0, 1], mode="lines",
+                name="Répartition proportionnelle",
+                line=dict(color=T.AXE, width=1.8)))
+            fig2.add_trace(go.Scatter(
+                x=cum_pop, y=cum_mm, mode="lines", name="Répartition observée",
+                line=dict(color=T.SERIE_1, width=2.6),
+                fill="tonexty", fillcolor="rgba(42,120,214,0.09)",
+                hovertemplate=("%{x:.0%} de la population cumulée<br>"
+                               "%{y:.0%} des points<extra></extra>")))
+            fig2.update_layout(
+                height=470, xaxis_title="Part cumulée de la population",
+                yaxis_title="Part cumulée des points Mobile Money",
+                xaxis=dict(tickformat=".0%"), yaxis=dict(tickformat=".0%"),
+                margin=dict(l=4, r=4, t=6, b=36))
+            st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
+            st.markdown(
+                T.lecture(
+                    "Les préfectures sont classées du plus faible au plus fort "
+                    "taux d'équipement par habitant. L'écart à la diagonale "
+                    "mesure l'inégalité. <b>Transformation de présentation</b> "
+                    "appliquée à des valeurs déjà contrôlées."),
+                unsafe_allow_html=True)
 
     # ======================================================== opérateurs
     st.markdown("")
@@ -164,22 +160,19 @@ def afficher(ctx: dict) -> None:
 
     g2, d2 = st.columns([1.45, 1], gap="medium")
     with g2:
-        st.markdown(T.carte_ouvre(
-            "Présence des opérateurs sur les points de service"),
-            unsafe_allow_html=True)
-        fig3 = go.Figure(go.Bar(
-            x=rep.points, y=rep.libelle, orientation="h",
-            marker=dict(color=[couleurs.get(l, T.GRIS_FOND)
-                               for l in rep.libelle]),
-            text=[f"{v:,}".replace(",", " ") + f"   ({v / len(brut):.1%})"
-                  for v in rep.points],
-            textposition="outside", textfont=dict(size=11, color=T.ENCRE_2),
-            hovertemplate="<b>%{y}</b><br>%{x:,.0f} points<extra></extra>"))
-        fig3.update_layout(height=250, showlegend=False,
-                           xaxis_title="Points Mobile Money", yaxis_title=None,
-                           margin=dict(l=4, r=140, t=6, b=34))
-        st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
+        with T.bloc("Présence des opérateurs sur les points de service"):
+            fig3 = go.Figure(go.Bar(
+                x=rep.points, y=rep.libelle, orientation="h",
+                marker=dict(color=[couleurs.get(l, T.GRIS_FOND)
+                                   for l in rep.libelle]),
+                text=[f"{v:,}".replace(",", " ") + f"   ({v / len(brut):.1%})"
+                      for v in rep.points],
+                textposition="outside", textfont=dict(size=11, color=T.ENCRE_2),
+                hovertemplate="<b>%{y}</b><br>%{x:,.0f} points<extra></extra>"))
+            fig3.update_layout(height=250, showlegend=False,
+                               xaxis_title="Points Mobile Money", yaxis_title=None,
+                               margin=dict(l=4, r=140, t=6, b=34))
+            st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
 
     n_tgc = int(rep.loc[rep.libelle == "Togocom seul", "points"].sum())
     n_moov = int(rep.loc[rep.libelle == "Moov seul", "points"].sum())
@@ -214,7 +207,7 @@ def afficher(ctx: dict) -> None:
         st.dataframe(t.sort_values("Points / 10 000 hab.").style.format({
             "Population": "{:,.0f}", "Points MM": "{:,.0f}",
             "Présence Moov": "{:,.0f}", "Présence Togocom": "{:,.0f}",
-            "Points / 10 000 hab.": "{:,.1f}"}),
+            "Points / 10 000 hab.": "{:,.1f}"}, thousands=" ", decimal=","),
             width="stretch", hide_index=True)
         st.caption("« Présence » compte les points où l'opérateur est "
                    "disponible : un point servi par les deux figure dans les "

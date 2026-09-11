@@ -53,9 +53,14 @@ DONNEES = [
     "points_mobile_money.csv", "prefectures.geojson",
 ]
 
-PAGES = ["Vue d'ensemble", "Infrastructures", "Desserte & population",
-         "Territoires prioritaires", "Arbitrage", "Plan d'action",
-         "Méthode & limites"]
+# Les sept pages, lues telles que l'application les nomme. La liste n'est pas
+# recopiee a la main : un controle qui code en dur ce qu'il verifie cesse de le
+# verifier des qu'on renomme une page.
+def _pages(dossier: Path) -> list[str]:
+    import sys as _sys
+    _sys.path.insert(0, str(dossier / "dashboard"))
+    import app as _app
+    return list(_app.PAGES)
 
 NOTICE = """# Tableau de bord — Accès aux télécommunications et aux services numériques au Togo
 
@@ -143,16 +148,119 @@ def _verifier(dossier: Path) -> list[tuple[str, bool, str]]:
     """Execute les sept pages depuis l'archive extraite."""
     from streamlit.testing.v1 import AppTest
 
+    entree = str(dossier / "streamlit_app.py")
     controles = []
-    for page in PAGES:
-        at = AppTest.from_file(str(dossier / "streamlit_app.py"),
-                               default_timeout=240)
+    for page in _pages(dossier):
+        at = AppTest.from_file(entree, default_timeout=240)
         at.session_state["page"] = page
         at.run()
         motif = ("; ".join(e.message for e in at.exception)[:120]
                  if at.exception else
                  f"{len(at.markdown)} blocs, {len(at.dataframe)} tables")
         controles.append((f"Page « {page} »", not at.exception, motif))
+
+    # NON-REGRESSION — la feuille de style doit etre reemise a CHAQUE execution.
+    # Streamlit rejoue le script d'entree a chaque interaction, mais Python ne
+    # reimporte pas un module deja charge : du CSS emis au niveau module de
+    # `dashboard/app.py` disparait des le premier clic, et la page s'affiche
+    # nue. Le defaut ne leve aucune exception — seul ce controle le voit.
+    def _css(at) -> bool:
+        return any("<style>" in m.value for m in at.markdown)
+
+    at = AppTest.from_file(entree, default_timeout=240)
+    at.run()
+    rendus = [_css(at)]
+    for _ in range(3):
+        at.run()
+        rendus.append(_css(at))
+    controles.append(("Feuille de style réémise à chaque rendu",
+                      all(rendus), f"4 rendus successifs : {rendus}"))
+
+    # Et sous une vraie navigation, qui declenche un rerun par `st.rerun()`.
+    at = AppTest.from_file(entree, default_timeout=240)
+    at.run()
+    cible = next((b for b in at.sidebar.button if b.label == "Arbitrage"), None)
+    if cible is not None:
+        cible.click().run()
+    controles.append(("Feuille de style conservée après navigation",
+                      cible is not None and _css(at) and not at.exception,
+                      "clic sur « Arbitrage » dans la navigation"))
+
+    # NON-REGRESSION — les icones de Streamlit sont des LIGATURES d'une fonte
+    # symbole. Un selecteur large du genre [class*="st-"] qui imposerait une
+    # police de texte les ferait s'afficher en clair : « keyboard_double_
+    # arrow_left » a la place d'une fleche, sur toutes les pages. Le defaut est
+    # purement visuel, donc invisible a l'execution — d'ou ce controle.
+    style = next((m.value for m in at.markdown if "<style>" in m.value), "")
+    pieges = [s for s in ('[class*="st-"]', '[class^="st-"]', '[class~="st-"]')
+              if s in style]
+    controles.append(("Aucun sélecteur large n'écrase la fonte des icônes",
+                      not pieges,
+                      "; ".join(pieges) if pieges
+                      else "fonte symbole préservée"))
+
+    # NON-REGRESSION — le bouton qui reouvre la barre laterale loge DANS la
+    # barre d'outils de Streamlit, aux cotes de « Deploy ». Masquer la barre
+    # d'outils entiere pour faire disparaitre « Deploy » emporte ce bouton :
+    # une fois le sommaire referme, il devient irrecuperable.
+    masque_tout = ('[data-testid="stToolbar"]' in style
+                   and "stExpandSidebarButton" not in style)
+    controles.append(
+        ("Le sommaire refermé reste réouvrable", not masque_tout,
+         "la barre d'outils entière est masquée" if masque_tout
+         else "« Deploy » masqué seul, bouton de réouverture conservé"))
+
+    # Et les depart rapides de la page Arbitrage, qui ecrivaient dans l'etat
+    # d'un widget deja instancie — Streamlit leve alors une exception.
+    at = AppTest.from_file(entree, default_timeout=240)
+    at.session_state["page"] = "Arbitrage"
+    at.run()
+    # Les libelles sont LUS dans la page, jamais recopies ici : un controle qui
+    # code en dur ce qu'il verifie cesse de le verifier des qu'on renomme.
+    import sys as _sys
+    _sys.path.insert(0, str(dossier / "dashboard"))
+    from sections import arbitrage as _Arb
+    presets, echecs = 0, []
+    for label in _Arb.PRESETS:
+        essai = AppTest.from_file(entree, default_timeout=240)
+        essai.session_state["page"] = "Arbitrage"
+        essai.run()
+        bouton = next((b for b in essai.button if b.label == label), None)
+        if bouton is None:
+            echecs.append(f"{label} : bouton absent")
+            continue
+        bouton.click().run()
+        presets += 1
+        if essai.exception:
+            echecs.append(f"{label} : {essai.exception[0].message[:60]}")
+    controles.append(("Départs rapides de pondération sans exception",
+                      not echecs and presets == len(_Arb.PRESETS),
+                      "; ".join(echecs) if echecs
+                      else f"{presets} préréglages appliqués"))
+
+    # NON-REGRESSION — invariant de la repondération.
+    # Aux poids de référence, le score reponderé DOIT retomber sur le DCPI
+    # publié, et la corrélation des rangs valoir exactement 1. Un appariement
+    # par position plutôt que par nom de territoire donnait ici -0,154 : un
+    # chiffre faux, affiché sans erreur, à côté d'un « 10 sur 10 » correct.
+    try:
+        import data as _D
+        from sections import arbitrage as _A
+        pref = _D.prefectures()
+        cles = [c for c, *_ in _A.COMPOSANTES]
+        poids = dict(zip(cles, _A.PRESETS["Référence"][0]))
+        classe = _A._reponderer(pref, poids)
+        ecart = float((classe.DCPI_perso - classe.DCPI).abs().max())
+        app = pref[["prefecture", "rang_DCPI"]].merge(
+            classe[["prefecture", "rang_perso"]], on="prefecture")
+        rho = float(app.rang_DCPI.corr(app.rang_perso, method="spearman"))
+        controles.append(
+            ("Repondération de référence = DCPI publié",
+             ecart < 1e-9 and abs(rho - 1.0) < 1e-9,
+             f"écart max {ecart:.2e} · corrélation des rangs {rho:.4f}"))
+    except Exception as e:                      # pragma: no cover
+        controles.append(("Repondération de référence = DCPI publié", False,
+                          f"{type(e).__name__}: {e}"[:120]))
     return controles
 
 

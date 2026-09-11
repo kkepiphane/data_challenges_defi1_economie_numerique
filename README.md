@@ -198,15 +198,22 @@ reports/           rapports de contrôle, support, aperçus, livrable
 
 ## Les sept pages du tableau de bord
 
-La navigation suit l'**intention du lecteur**, pas la structure des données.
+La navigation suit l'**intention du lecteur**, pas la structure des données :
+établir le diagnostic, puis décider.
+
+L'interface est composée comme un **document**, pas comme une console : fond
+crème, titres en romain à empattements (Spectral), filets là où l'on mettrait
+d'ordinaire des cadres, et une barre latérale qui fonctionne comme le sommaire
+du rapport. Les nombres, eux, restent en Inter avec chiffres à chasse fixe —
+une colonne de valeurs doit s'aligner.
 
 | | Page | Ce qu'on y trouve |
 |---|---|---|
-| Synthèse | **Vue d'ensemble** | le chiffre national, ce qu'il masque, les cinq territoires prioritaires |
-| Axes d'analyse | **Infrastructures** | agences, agents Mobile Money, centres de données — après déduplication |
+| Diagnostic | **Vue d'ensemble** | le chiffre national, ce qu'il masque, les cinq territoires prioritaires |
+| Diagnostic | **Infrastructures** | agences, agents Mobile Money, centres de données — après déduplication |
 | | **Desserte & population** | ratios par habitant, concentration, écarts entre préfectures |
 | | **Territoires prioritaires** | l'indice DCPI, sa composition, sa robustesse, une fiche par territoire |
-| Décision | **Arbitrage** | réglez vous-même les pondérations ; convertissez un objectif de desserte en points à ouvrir ; exportez |
+| Décider | **Arbitrage** | réglez vous-même les pondérations ; convertissez un objectif de desserte en points à ouvrir ; exportez |
 | | **Plan d'action** | quelles interventions les déficits mesurés appellent, et où |
 | | **Méthode & limites** | sources, contrôles, pistes écartées, limites à connaître avant de citer |
 
