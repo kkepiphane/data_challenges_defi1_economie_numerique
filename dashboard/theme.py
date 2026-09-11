@@ -383,6 +383,13 @@ CSS = f"""
      cet air transforme sept entrees en une liste qui se parcourt au lieu de se
      voir d'un coup : le rythme est resserre, et seuls les intertitres
      reintroduisent de l'air. */
+  /* Intertitre aligne a gauche, sur la meme verticale que les ICONES des
+     entrees : filet de marge (2 px) plus la marge interieure du bouton. Le
+     sommaire n'a ainsi qu'un seul bord gauche, du haut jusqu'aux filtres. */
+  section[data-testid="stSidebar"] .sb-groupe {{
+      padding: 0 0 0.35rem calc(0.7rem + 2px); text-align: left;
+  }}
+
   section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {{
       gap: 0.1rem;
   }}
@@ -413,14 +420,44 @@ CSS = f"""
       min-height: 0; transition: color 0.12s ease, border-color 0.12s ease;
   }}
   /* Le libelle est centre par un conteneur INTERNE, pas par le bouton : regler
-     `justify-content` sur le bouton seul reste sans effet. `!important` est ici
-     justifie et non commode — les classes d'emotion que Streamlit engendre
-     portent une specificite qu'aucun selecteur stable ne peut depasser, et leur
-     nom change a chaque version. */
-  section[data-testid="stSidebar"] div[data-testid="stButton"] > button * {{
-      width: 100% !important; text-align: left !important;
-      display: block !important;
+     `justify-content` sur le bouton seul reste sans effet. Le bouton devient
+     donc une RANGEE explicite — icone, puis intitule qui occupe le reste.
+     `!important` est ici justifie et non commode : les classes d'emotion que
+     Streamlit engendre portent une specificite qu'aucun selecteur stable ne
+     peut depasser, et leur nom change a chaque version. */
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button {{
+      display: flex !important; align-items: center !important;
+      justify-content: flex-start !important;
   }}
+  /* Streamlit empile DEUX conteneurs flex CENTRES entre le bouton et son
+     contenu (mesure dans le navigateur). L'alignement doit etre impose aux
+     deux : sur le bouton seul, le couple icone + intitule reste centre, et les
+     intitules cessent de s'aligner d'une ligne a l'autre. */
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button > div,
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button > div > span {{
+      flex: 1 1 auto !important; width: 100% !important; min-width: 0;
+      justify-content: flex-start !important; align-items: center !important;
+      text-align: left !important;
+  }}
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button > div > span {{
+      gap: 0.62rem;
+  }}
+  /* L'icone reste en retrait : elle accompagne l'intitule, elle ne le
+     concurrence pas. Elle ne prend la couleur d'accent que sur la page
+     ouverte, ou elle redouble le filet de marge. */
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button
+      [data-testid="stIconMaterial"] {{
+      /* Largeur FIXE : c'est elle qui garantit que les intitules demarrent
+         tous sur la meme verticale, quel que soit le dessin de l'icone. */
+      flex: 0 0 auto !important; font-size: 1.05rem !important;
+      width: 1.15rem !important; text-align: center !important;
+      color: {FILET_FORT} !important; transition: color 0.12s ease;
+  }}
+  section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover
+      [data-testid="stIconMaterial"] {{ color: {ENCRE_MUET} !important; }}
+  section[data-testid="stSidebar"] button[kind="primary"] [data-testid="stIconMaterial"],
+  section[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]
+      [data-testid="stIconMaterial"] {{ color: {VERT} !important; }}
   section[data-testid="stSidebar"] div[data-testid="stButton"] > button p {{
       font-family: {SERIF}; font-size: 0.97rem; font-weight: 400;
       line-height: 1.45; letter-spacing: -0.004em;

@@ -38,20 +38,27 @@ from sections import (apercu, arbitrage, desserte,  # noqa: E402
 
 # L'ordre est celui de la demonstration : les quatre premieres pages etablissent
 # le diagnostic, les trois dernieres en tirent les consequences.
+# Chaque entree : (intitule, icone, fonction d'affichage).
+#
+# L'icone dit CE QUE LA PAGE MONTRE, jamais « une page ». Un jeu de pictogrammes
+# decoratifs n'aiderait personne : ici l'antenne annonce des infrastructures, la
+# carte un decoupage territorial, les curseurs un reglage. Le trait reste fin et
+# la couleur suit celle du texte — l'icone accompagne l'intitule, elle ne le
+# concurrence pas.
 NAVIGATION = [
     ("Diagnostic", [
-        ("Vue d'ensemble", apercu.afficher),
-        ("Infrastructures", infrastructures.afficher),
-        ("Desserte & population", desserte.afficher),
-        ("Territoires prioritaires", priorites.afficher),
+        ("Vue d'ensemble", ":material/summarize:", apercu.afficher),
+        ("Infrastructures", ":material/cell_tower:", infrastructures.afficher),
+        ("Desserte & population", ":material/groups:", desserte.afficher),
+        ("Territoires prioritaires", ":material/map:", priorites.afficher),
     ]),
     ("Décider", [
-        ("Arbitrage", arbitrage.afficher),
-        ("Plan d'action", plan_action.afficher),
-        ("Méthode & limites", methode.afficher),
+        ("Arbitrage", ":material/tune:", arbitrage.afficher),
+        ("Plan d'action", ":material/checklist:", plan_action.afficher),
+        ("Méthode & limites", ":material/rule:", methode.afficher),
     ]),
 ]
-PAGES = {nom: fn for _, items in NAVIGATION for nom, fn in items}
+PAGES = {nom: fn for _, items in NAVIGATION for nom, _, fn in items}
 DEFAUT = "Vue d'ensemble"
 
 
@@ -87,9 +94,10 @@ def main() -> None:
         for indice, (groupe, items) in enumerate(NAVIGATION):
             with st.container(key=f"navgrp{indice}"):
                 st.markdown(T.etiquette(groupe), unsafe_allow_html=True)
-                for nom, _ in items:
+                for nom, icone, _ in items:
                     actif = st.session_state.page == nom
-                    if st.button(nom, key=f"nav_{nom}", width="stretch",
+                    if st.button(nom, icon=icone, key=f"nav_{nom}",
+                                 width="stretch",
                                  type="primary" if actif else "secondary"):
                         st.session_state.page = nom
                         st.rerun()

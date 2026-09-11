@@ -3,6 +3,11 @@ SUPPORT DE PRESENTATION — 10 DIAPOSITIVES
 ==========================================
 Assemble `reports/Defi1_Togo_Connectivite_numerique.pptx`.
 
+Une PAGE DE GARDE, puis NEUF diapositives de contenu. Le reglement plafonne le
+support a dix pages, page de garde comprise : les deux diapositives consacrees
+aux donnees — sources d'une part, qualite et preparation d'autre part — sont
+donc reunies en une seule, qui porte les deux propos.
+
 Regle de construction : CHAQUE diapositive porte un MESSAGE PRINCIPAL unique,
 formule comme une affirmation defendable, pas comme un titre de rubrique.
 Si le message ne tient pas en une phrase verifiable, la diapositive est mal
@@ -102,7 +107,7 @@ def _rect(slide, x, y, w, h, remplissage=None, bordure=None, epaisseur=1.0):
 
 
 def _diapo(prs, eyebrow: str, titre: str, message: str, numero: int,
-           total: int = 10):
+           total: int = 9):
     """Ossature commune : filet tricolore, sur-titre, titre, message, pied."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     _rect(slide, 0, 0, L, H, PLAN)
@@ -338,11 +343,11 @@ def main() -> None:
              Inches(2.4), lib, val, note, coul)
 
     # ---------------------------------------------------------------- 02
-    s = _diapo(prs, "Données", "Données utilisées et sources",
-               "Trois sources publiques, trois producteurs, trois millésimes "
-               "à moins de deux ans d'écart — et une donnée essentielle qui "
-               "manque.", 2)
-    _tableau(s, MARGE, Inches(2.15), L - 2 * MARGE,
+    s = _diapo(prs, "Données", "Données, sources et qualité",
+               "Trois sources publiques, trois producteurs — et deux constats "
+               "qui corrigent l'énoncé du défi : 2 opérateurs et non 4, "
+               "90 agences et non 141.", 2)
+    _tableau(s, MARGE, Inches(2.05), L - 2 * MARGE,
              ["Donnée", "Producteur", "Période", "Ce qu'elle apporte"],
              [["Agences, agents Mobile Money, data centers",
                "Géoportail national du Togo", "Collecte 2021-2022",
@@ -354,70 +359,56 @@ def main() -> None:
                "Common Operational Datasets (OCHA)", "Valides au 07/01/2021",
                "Contours, densités, distances"]],
              largeurs=[0.30, 0.24, 0.18, 0.28])
-    _puces(s, MARGE, Inches(3.9), Inches(6.1), [
-        ("30 fichiers, 5 formats — un seul fait autorité",
-         "Les données d'infrastructure sont livrées en CSV, XLSX, KML, "
-         "GeoJSON et shapefile. Le CSV est le seul à cumuler noms de "
-         "variables complets et précision maximale des coordonnées."),
-        ("La population a dû être extraite d'un PDF de 94 pages",
-         "Le livret RGPH-5 n'existe pas en format tabulaire. L'extraction "
-         "est automatisée et validée par les sommes hiérarchiques."),
-    ])
-    _rect(s, Inches(7.1), Inches(3.9), Inches(5.6), Inches(2.35), BLANC,
-          BORDURE, 0.75)
-    _rect(s, Inches(7.1), Inches(3.9), Inches(0.035), Inches(2.35), CRITIQUE)
-    _zone(s, Inches(7.35), Inches(4.1), Inches(5.1), Inches(0.3),
-          "LA DONNÉE QUI MANQUE", 8, True, ENCRE_MUET, police="Consolas")
-    _zone(s, Inches(7.35), Inches(4.42), Inches(5.1), Inches(1.7),
-          "Aucune mesure de couverture réseau mobile n'existe dans les "
-          "sources ouvertes mobilisées, et les couches d'antennes du "
-          "catalogue national ne sont pas publiques.\n\n"
-          "L'objectif « identifier les zones blanches » n'est donc pas "
-          "traité comme tel. Ce travail mesure un déficit d'accès aux "
-          "services — pas une absence de réseau. La distinction est "
-          "maintenue partout.", 10.5, False, ENCRE_2, interligne=1.35)
 
-    # ---------------------------------------------------------------- 03
-    s = _diapo(prs, "Préparation", "Qualité et préparation des données",
-               "Deux constats des données corrigent l'énoncé du défi : il y a "
-               "2 opérateurs et non 4, et 90 agences et non 141.", 3)
-    _puces(s, MARGE, Inches(2.2), Inches(6.2), [
+    # La donnee absente est annoncee des la diapositive des sources : elle
+    # conditionne la lecture de tout le reste. La diapositive 08 y revient.
+    _rect(s, MARGE, Inches(3.5), L - 2 * MARGE, Inches(0.66), BLANC,
+          BORDURE, 0.75)
+    _rect(s, MARGE, Inches(3.5), Inches(0.035), Inches(0.66), CRITIQUE)
+    _zone(s, MARGE + Inches(0.22), Inches(3.63), Inches(3.0), Inches(0.24),
+          "LA DONNÉE QUI MANQUE", 8, True, ENCRE_MUET, police="Consolas")
+    _zone(s, MARGE + Inches(0.22), Inches(3.86), L - 2 * MARGE - Inches(0.5),
+          Inches(0.26),
+          "Aucune mesure de couverture réseau mobile n'existe dans les sources "
+          "ouvertes mobilisées. Ce travail mesure un déficit d'accès aux "
+          "services — pas une absence de réseau.", 10.5, False, ENCRE_2)
+
+    _puces(s, MARGE, Inches(4.45), Inches(6.15), [
         ("« Agences – Télécom » n'est pas un quatrième opérateur",
-         "Ses 51 lignes sont déjà contenues dans Moov ∪ Togocom, sans un "
-         "seul enregistrement propre. Empiler les quatre fichiers afficherait "
-         "141 agences au lieu de 90 — une surestimation de 57 % dès le "
-         "premier indicateur."),
+         "Ses 51 lignes sont déjà contenues dans les fichiers Moov et "
+         "Togocom réunis, sans un seul enregistrement propre. "
+         "Empiler les quatre fichiers afficherait "
+         "141 agences au lieu de 90 — 57 % de surestimation dès le premier "
+         "indicateur."),
         ("« Agences – CANAL+ » est vide à la source",
-         "Le serveur joint lui-même la mention « the query result is empty ». "
-         "C'est une donnée non disponible, et non une absence d'agences sur "
-         "le terrain."),
+         "Le serveur joint lui-même la mention « the query result is empty » : "
+         "c'est une donnée non disponible, et non une absence d'agences sur le "
+         "terrain."),
         ("L'identifiant fourni est volatile",
          "La même agence porte un identifiant différent dans deux fichiers "
-         "exportés à trois secondes d'intervalle. La déduplication repose "
-         "donc sur le nom et les coordonnées, jamais sur cet identifiant."),
+         "exportés à trois secondes d'intervalle. La déduplication repose sur "
+         "le nom et les coordonnées."),
     ])
-    _rect(s, Inches(7.2), Inches(2.2), Inches(5.5), Inches(3.55), BLANC,
+
+    _rect(s, Inches(7.2), Inches(4.45), Inches(5.5), Inches(2.15), BLANC,
           BORDURE, 0.75)
-    _rect(s, Inches(7.2), Inches(2.2), Inches(0.035), Inches(3.55), VERT)
-    _zone(s, Inches(7.45), Inches(2.4), Inches(5.0), Inches(0.3),
-          "23 CONTRÔLES ARITHMÉTIQUES, REJOUÉS À CHAQUE EXÉCUTION", 8, True,
+    _rect(s, Inches(7.2), Inches(4.45), Inches(0.035), Inches(2.15), VERT)
+    _zone(s, Inches(7.45), Inches(4.63), Inches(5.0), Inches(0.3),
+          "25 CONTRÔLES ARITHMÉTIQUES, REJOUÉS À CHAQUE EXÉCUTION", 8, True,
           ENCRE_MUET, police="Consolas", interligne=1.3)
-    _zone(s, Inches(7.45), Inches(2.85), Inches(5.0), Inches(2.7),
-          "La population extraite du PDF somme exactement à 8 095 498 "
-          "habitants aux trois niveaux — 5 régions, 39 préfectures, "
+    _zone(s, Inches(7.45), Inches(5.0), Inches(5.0), Inches(1.45),
+          "La population extraite du PDF de l'INSEED somme exactement à "
+          "8 095 498 habitants aux trois niveaux — 5 régions, 39 préfectures, "
           "117 communes — sans écart d'une unité.\n\n"
-          "Ces contrôles ont réellement servi. Deux échecs ont évité des "
-          "erreurs graves :\n\n"
-          "① Une jointure sur des noms accentués faisait tomber neuf "
-          "préfectures à zéro point Mobile Money — dont Agoè-Nyivé et ses "
-          "882 695 habitants.\n\n"
-          "② Une somme régionale à 11 630 489 habitants a révélé un double "
-          "comptage du Grand Lomé.", 10.5, False, ENCRE_2, interligne=1.32)
+          "Ces contrôles ont servi : une jointure sur des noms accentués "
+          "faisait tomber neuf préfectures à zéro point Mobile Money, et une "
+          "somme régionale à 11 630 489 a révélé un double comptage du Grand "
+          "Lomé.", 10, False, ENCRE_2, interligne=1.3)
 
     # ---------------------------------------------------------------- 04
     s = _diapo(prs, "Méthode", "Méthodologie",
                "Deux unités d'analyse, chacune utilisée là où sa validité est "
-               "prouvée — et un indice dont les pondérations sont testées.", 4)
+               "prouvée — et un indice dont les pondérations sont testées.", 3)
     _zone(s, MARGE, Inches(2.15), Inches(6.2), Inches(0.26),
           "LES DEUX UNITÉS D'ANALYSE", 8, True, ENCRE_MUET, police="Consolas")
     _tableau(s, MARGE, Inches(2.45), Inches(6.2),
@@ -461,7 +452,7 @@ def main() -> None:
     s = _diapo(prs, "Diagnostic", "Diagnostic national",
                f"{_esp(national)} habitants par point de service en moyenne — mais un "
                f"rapport de 1 à {_fr(rapport)} entre la préfecture la mieux et "
-               f"la moins bien desservie.", 5)
+               f"la moins bien desservie.", 4)
     _image(s, "ecart_desserte", Inches(4.35), Inches(2.05), hauteur=Inches(4.7))
     for i, (lib, val, note, coul) in enumerate([
             ("Moyenne nationale", _esp(national),
@@ -481,7 +472,7 @@ def main() -> None:
     s = _diapo(prs, "Géospatial",
                "Analyse géospatiale et inégalités territoriales",
                f"La moitié la moins bien desservie de la population ne dispose "
-               f"que de {part_moitie:.0%} des points de service.".replace("%", " %"), 6)
+               f"que de {part_moitie:.0%} des points de service.".replace("%", " %"), 5)
     _image(s, "quadrant", Inches(0.55), Inches(2.1), hauteur=Inches(4.3))
     _image(s, "concentration", Inches(7.0), Inches(2.1), hauteur=Inches(4.3))
     _zone(s, Inches(0.55), Inches(6.5), Inches(6.0), Inches(0.5),
@@ -498,7 +489,7 @@ def main() -> None:
     s = _diapo(prs, "Priorisation", "Zones prioritaires · indice DCPI",
                "Neuf préfectures restent dans le top 10 pour au moins 90 % de "
                "2 000 pondérations testées : leur priorité ne dépend pas de "
-               "la méthode.", 7)
+               "la méthode.", 6)
     _image(s, "carte_priorite", Inches(0.6), Inches(2.05), hauteur=Inches(4.75))
     _image(s, "sensibilite", Inches(4.5), Inches(2.05), hauteur=Inches(4.05))
     lignes = [[f"{int(r.rang_DCPI)}", r.prefecture, _esp(int(r.population)),
@@ -520,7 +511,7 @@ def main() -> None:
     # ---------------------------------------------------------------- 08
     s = _diapo(prs, "Décision", "Recommandations stratégiques",
                "Cinq leviers, chacun déclenché par un seuil mesuré — aucune "
-               "recommandation sans le chiffre qui la justifie.", 8)
+               "recommandation sans le chiffre qui la justifie.", 7)
     _image(s, "leviers", Inches(6.9), Inches(2.35), largeur=Inches(5.85))
     _puces(s, MARGE, Inches(2.15), Inches(6.0), [
         ("Densifier le réseau d'agents Mobile Money — levier rapide",
@@ -550,7 +541,7 @@ def main() -> None:
     # ---------------------------------------------------------------- 09
     s = _diapo(prs, "Précautions", "Limites et précautions d'interprétation",
                "Ce diagnostic mesure un déficit d'accès aux services — pas "
-               "une absence de réseau mobile. La distinction est décisive.", 9)
+               "une absence de réseau mobile. La distinction est décisive.", 8)
     _puces(s, MARGE, Inches(2.15), Inches(6.1), [
         ("La couverture réseau n'est pas mesurée",
          "Une zone sans agence ni agent Mobile Money n'est pas nécessairement "
@@ -580,7 +571,7 @@ def main() -> None:
     # ---------------------------------------------------------------- 10
     s = _diapo(prs, "Conclusion", "Réponse à la problématique",
                f"{len(stables)} territoires, {_esp(pop_stable)} habitants, et un ordre "
-               "d'intervention qui résiste au changement de méthode.", 10)
+               "d'intervention qui résiste au changement de méthode.", 9)
     _zone(s, MARGE, Inches(2.15), Inches(6.3), Inches(0.3),
           "OÙ INVESTIR EN PRIORITÉ", 8, True, ENCRE_MUET, police="Consolas")
     noms = ", ".join(stables.prefecture.tolist()[:-1])
@@ -594,7 +585,7 @@ def main() -> None:
          "du seuil où l'intervention devient rentable en nombre d'habitants "
          "touchés."),
         ("Pourquoi on peut le défendre",
-         "2 000 pondérations testées, corrélation moyenne 0,971. 23 contrôles "
+         "2 000 pondérations testées, corrélation moyenne 0,971. 25 contrôles "
          "arithmétiques au vert. Aucune valeur imputée. Les approches "
          "écartées sont documentées avec leurs preuves."),
     ])
@@ -605,7 +596,7 @@ def main() -> None:
              f"{pop_stable / 8_095_498:.0%} de la population", SERIE_1),
             ("Stabilité du classement", "0,971",
              "corrélation sur 2 000 pondérations", SERIE_3),
-            ("Contrôles au vert", "23 / 23", "rejoués à chaque exécution",
+            ("Contrôles au vert", "25 / 25", "rejoués à chaque exécution",
              VERT)]):
         _kpi(s, Inches(7.3) + Inches(2.78) * (i % 2),
              Inches(2.15) + Inches(1.5) * (i // 2), Inches(2.6),
@@ -619,28 +610,6 @@ def main() -> None:
           "d'antennes du catalogue national — c'est la première recommandation "
           "adressée au producteur de données.",
           10, False, ENCRE_2, interligne=1.32)
-
-    # ---------------------------------------------------------- PAGE DE FIN
-    CV.page_de_fin(
-        prs,
-        titre="Le diagnostic ne s'arrête pas\nà ces diapositives",
-        lignes=[
-            ("Tableau de bord", "39 préfectures, 117 communes, 19 788 points — "
-                                "cartes, fiches de territoire, repondération "
-                                "de l'indice et simulateur de couverture"),
-            ("Chaîne reproductible", "8 scripts, un rapport de contrôle par "
-                                     "étape, 25 contrôles arithmétiques rejoués "
-                                     "à chaque exécution"),
-            ("Données ouvertes", "aucune valeur imputée ; les trois pistes "
-                                 "écartées sont documentées avec leurs preuves"),
-        ],
-        url=(URL_TABLEAU_DE_BORD or
-             "Tableau de bord en ligne — adresse à renseigner "
-             "(src/build_deck.py)"),
-        auteur="KOUTSAVA Kossi Epiphane",
-        mention=("République togolaise · Défi Économie numérique · "
-                 "Un score élevé signale un besoin mesuré — ni un coût, "
-                 "ni une faisabilité, ni une rentabilité."))
 
     SORTIE.parent.mkdir(parents=True, exist_ok=True)
     prs.save(SORTIE)

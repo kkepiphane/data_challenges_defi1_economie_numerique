@@ -50,7 +50,7 @@ python src/spatial_access.py     # distances (reprojection EPSG:32631)
 python src/priority_index.py     # indice DCPI + analyse de sensibilité
 python src/build_app_data.py     # paquet léger lu par l'application
 python src/build_deck_figures.py # visuels du support
-python src/build_deck.py         # support de présentation, 12 diapositives
+python src/build_deck.py         # support de présentation, 10 diapositives
 python src/apercu_support.py     # aperçu PNG de chaque diapositive
 python src/build_livrable.py     # archive .zip du tableau de bord, vérifiée
 ```
@@ -77,7 +77,7 @@ accepter en production les échecs de build qui vont avec.
 |---|---|
 | **Tableau de bord interactif** | `reports/tableau_de_bord_togo.zip` — archive autonome, 0,5 Mo |
 | Tableau de bord, en local | `streamlit run streamlit_app.py` |
-| Support de présentation, 12 diapositives | `reports/Defi1_Togo_Connectivite_numerique.pptx` |
+| Support de présentation, 10 diapositives | `reports/Defi1_Togo_Connectivite_numerique.pptx` |
 | Aperçu PNG des diapositives | `reports/apercu/diapo_NN.png` |
 | Rapports de contrôle, un par étape | `reports/*.md` |
 | Datasets analytiques | `data/processed/` |
