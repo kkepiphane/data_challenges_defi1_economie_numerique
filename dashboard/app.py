@@ -8,7 +8,7 @@ du lecteur, pas la structure des donnees :
 
     SYNTHESE        ce qu'il faut retenir en trente secondes
     AXES D'ANALYSE  de quoi ce diagnostic est fait
-    DECISION        ou agir, et sur quelles bases
+    DECISION        ou agir, sur quelles bases, et a quel volume d'equipement
 
 Le tableau de bord ne recalcule rien : il lit les fichiers produits et
 controles par la chaine `src/`.
@@ -25,8 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import data as D                                       # noqa: E402
 import theme as T                                      # noqa: E402
-from sections import (apercu, desserte, infrastructures,  # noqa: E402
-                      methode, plan_action, priorites)
+from sections import (apercu, arbitrage, desserte,  # noqa: E402
+                      infrastructures, methode, plan_action, priorites)
 
 st.set_page_config(page_title="Atlas de la connectivité numérique — Togo",
                    page_icon="📶", layout="wide",
@@ -42,6 +42,7 @@ NAVIGATION = [
         ("Territoires prioritaires", priorites.afficher),
     ]),
     ("Décision", [
+        ("Arbitrage", arbitrage.afficher),
         ("Plan d'action", plan_action.afficher),
         ("Méthode & limites", methode.afficher),
     ]),
@@ -86,7 +87,7 @@ def main() -> None:
             '<div class="sb-pied">'
             '3 sources · 39 préfectures · 117 communes<br>'
             'Infrastructures 2021-2022 · Population 2022<br>'
-            '23 contrôles arithmétiques au vert'
+            '25 contrôles arithmétiques au vert'
             '</div>', unsafe_allow_html=True)
 
     ctx = {

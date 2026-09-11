@@ -1,0 +1,10 @@
+variante,spearman,top10_conserve
+"Reference (30/25/25/20, min-max)",1.0,10
+Normalisation par rang,0.9528340080971661,8
+Poids egaux (25 % chacun),0.9961538461538463,10
+Sans enjeu demographique (D4 exclue),0.9700404858299596,10
+"Deficits seuls, poids egaux (D1-D3)",0.9661943319838058,10
+Sans D1,0.9251012145748989,9
+Sans D2,0.879757085020243,8
+Sans D3,0.9331983805668017,9
+Sans D4,0.9700404858299596,10

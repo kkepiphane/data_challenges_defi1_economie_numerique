@@ -1,0 +1,94 @@
+id,etab_nom,type_infrastructure,operateur,actif,figure_dans,region,prefecture,commune,canton,lon,lat
+d14f2d11960bbfb9,Agence Moov Sotouboua,Agence operateur,Moov,True,Moov,Centrale,Sotouboua,Sotouboua 1,Sotouboua,0.977073,8.560677
+0b0a3365af82ee66,Agence Moov Sokode,Agence operateur,Moov,True,Moov,Centrale,Tchaoudjo,Tchaoudjo 1,Sokodè (Komah),1.138805,8.989586
+eb0a5944faf39cd2,Agence Moov Blitta Sous L'Antenne,Agence operateur,Moov,True,Moov,Centrale,Blitta,Blitta 1,Blitta-Village,1.008393,8.339182
+b7ac1a5116d0e37f,Moov Store Agoe,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.209334,6.221722
+98b5a024ae669ae3,Moov Store Baguida,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 6,Baguida,1.337993,6.167402
+af63083c61b3ffb2,Agence Moov Sagbado,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 7,Aflao-Sagbado,1.13712,6.19368
+57ddd61669f22053,Agence Moov Store Telessou,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Agoè-Nyivé,Agoè-Nyivé 3,Vakpossito,1.174574,6.21351
+b7f1d5094056c02b,Agence Moov Adidoadin,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.188301,6.199214
+a63a766768b31d61,Agence Moov Nukafu,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 3,Bè-Ouest,1.234461,6.170216
+f587d41c17d4de39,Agence Moov Be Kpota,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 1,Bè-Est,1.255283,6.157663
+29fb625f073d88c1,Agence Moov Ocam,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 1,Bè-Est,1.24004,6.130493
+6ed7f653edb62b4b,Agence Moov Hanoukope,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 4,Amoutivé,1.219527,6.135791
+828e1893b74b604a,Agence Moov Teddycom Adakpame,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 1,Bè-Est,1.284802,6.15993
+d73b74e1fd82b533,Agence Moov Akodessewa,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 1,Bè-Est,1.253744,6.149535
+f32de97fe0cb4dfb,Agence Moov Adidogome,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.166613,6.185315
+1e69841038580838,Agence Moov Privilège,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 1,Bè-Est,1.240796,6.152183
+0f45a60ab1a066d9,Moov Store Tsevie,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Zio,Zio 1,Tsévié,1.209152,6.410937
+10fd039cd7c12c35,Agence Moov Aeroport Lome,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Golfe,Golfe 2,Bè-Centre,1.253018,6.170391
+0c656fb5c712b075,Agence Moov Kara,Agence operateur,Moov,True,Moov,Kara,Kozah,Kozah 1,Commune De Kara,1.188442,9.546852
+7d49ce9c8f62556e,Agence Moov Bassar,Agence operateur,Moov,True,Moov,Kara,Bassar,Bassar 1,Bassar,0.781485,9.262368
+16d33ebecced39c3,Moov Store Djagble Centre,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Zio,Zio 1,Djagblé,1.282716,6.253717
+bdee1254a277d170,Agence Moov Kpetoume,Agence operateur,Moov,True,"Moov, Telecom",Maritime,Avé,Avé 1,Assahoun,0.915392,6.448079
+0699b63abf962b03,Agence Moov Atakpame Kondji,Agence operateur,Moov,True,Moov,Plateaux,Kloto,Kloto 1,Agome-Kpalime,0.632324,6.912438
+d1a117be1d8894d3,Moov Store de Kpele Adeta,Agence operateur,Moov,True,Moov,Plateaux,Kpélé,Kpélé 1,Kpélé-Novivé,0.731263,7.132038
+0ce25b8731c1952a,Agence Moov Anie,Agence operateur,Moov,True,Moov,Plateaux,Anié,Anié 1,Anié,1.19344,7.759782
+326c6b830a19ad1c,Agence Moov Notse,Agence operateur,Moov,True,Moov,Plateaux,Haho,Haho 1,Notsé,1.171063,6.953372
+7be6660ee0d5040b,Franchise Moov Dapaong,Agence operateur,Moov,True,Moov,Savanes,Tône,Tône 1,Dapaong,0.202883,10.876092
+c1a1445634ecb3f2,Franchise Moov Cinkanssé,Agence operateur,Moov,True,Moov,Savanes,Cinkassé,Cinkassé 1,Cinkassé,0.020775,11.097228
+2352359ad1c2dad0,Agence Togocom Sotouboua,Agence operateur,Togocom,True,Togocom,Centrale,Sotouboua,Sotouboua 1,Sotouboua,0.985734,8.561571
+944302ea1cb338b4,Agence Togocom Assivito,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 4,Amoutivé,1.221865,6.130468
+5d4f7c2d4f29fd23,Boutique Togocom Tchakala,Agence operateur,Togocom,True,Togocom,Centrale,Tchaoudjo,Tchaoudjo 1,Sokodè (Komah),1.140467,8.984199
+656bf29fea5dabc2,Agence Togocom Sokode,Agence operateur,Togocom,True,Togocom,Centrale,Tchaoudjo,Tchaoudjo 1,Sokodè (Komah),1.136423,8.995775
+ef9530de5f24abe2,Agence Togocom Franchise Koma,Agence operateur,Togocom,True,Togocom,Centrale,Tchaoudjo,Tchaoudjo 1,Sokodè (Komah),1.149767,8.969712
+27f9394cd60c40fd,Agence Togocom Tchamba,Agence operateur,Togocom,True,Togocom,Centrale,Tchamba,Tchamba 1,Tchamba,1.415433,9.021938
+506ba340730ee3f9,Franchise Togocom Kaboli,Agence operateur,Togocom,True,Togocom,Centrale,Tchamba,Tchamba 3,Kaboli,1.593007,8.74632
+611875b1dd0d1b90,Agence Togocom Sotouboua,Agence operateur,Togocom,True,Togocom,Centrale,Sotouboua,Sotouboua 1,Sotouboua,0.974814,8.561472
+7d7c133b51f33ab3,Agence Togocom Blitta,Agence operateur,Togocom,True,Togocom,Centrale,Blitta,Blitta 1,Blitta-Village,1.010278,8.343178
+232fa6818b3b7355,Agence Togocom Baguida,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 6,Baguida,1.342513,6.168715
+5fdfe48df9fb8248,Agence Togocom Agoe,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.2109,6.231078
+36a97c74cf115fed,Franchise Togocom Agoe Assiyeye,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.199067,6.230627
+681b2f4062f3c7b3,Franchise Togocom Agoe Nyiveme,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.206187,6.22099
+09df42f06c146071,Franchise Togocom Agoe Plateau,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.187128,6.21647
+08ea6ed713ef5ed2,Agence Togocom Elavagno Kleve,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 3,Vakpossito,1.166604,6.211174
+c32154222eda5871,Franchise Togocom Agoe Anokui,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.187198,6.242343
+2225e732ca64b142,Agence Togocom Zossime,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 5,Sanguera,1.149106,6.233276
+bc31ae19e9bd53fe,Franchise Togocom Togblekope,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 4,Togblekope,1.208026,6.257587
+59be6de4b7c617f8,Franchise Togocom Adeticope,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 6,Adétikopé,1.217754,6.317351
+9ee0c8090b21f35f,Franchise Togocom Bewise,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 1,Agoè-Nyivé,1.168584,6.241373
+3b16c47d6bf22972,Franchise Togocom Legbassito,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 2,Légbassito,1.154997,6.266943
+e9a793ca17d31a11,Agence Togocom Adigome,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.178493,6.176719
+d8a3b9f234ef4169,Boutique Togocom Sagbado,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 7,Aflao-Sagbado,1.139887,6.193598
+d6b603817178969f,Agence Togocom Madiba,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.149612,6.19941
+def94af751ee18be,Agence Togocom Totsi,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.19183,6.190435
+3ba4f99983254b47,Agence Togocom Aflao Gakli,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 5,Aflao-Gakli,1.199753,6.169728
+f0358ae65e202729,Agence Togocom Nukafu,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 3,Bè-Ouest,1.23446,6.164445
+3908032f11e5e626,Agence Togocom Place de L'Indépendance,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 4,Amoutivé,1.214622,6.129417
+48335f8c774be8ce,Franchise Togocom Sanguera,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Agoè-Nyivé,Agoè-Nyivé 5,Sanguera,1.110727,6.23209
+17fd00defcbbe87b,Agence Togocom Hedzranawoe,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 2,Bè-Centre,1.24012,6.17916
+3d02fd4a91c060db,Agence Togocom Aéroport,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 2,Bè-Centre,1.253234,6.170705
+dd5f52e4f45efd35,Agence Togocom Ahadji Kpota,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 1,Bè-Est,1.284386,6.161973
+42dfcc3bb6016dd8,Agence Togocom Propre Port,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 1,Bè-Est,1.276093,6.14345
+f50d9e904702676e,Agence Togocom Mono,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Golfe,Golfe 1,Bè-Est,1.261722,6.136724
+f8100f7a34fb6e6a,Agence Togocom Store Djagble,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Zio,Zio 1,Abobo,1.285443,6.265293
+ddf82d423e7530fd,Agence Togocom Dongoyo,Agence operateur,Togocom,True,Togocom,Kara,Kozah,Kozah 1,Commune De Kara,1.186815,9.549365
+0505bcaf04440eaa,Agence Togocom Bassar,Agence operateur,Togocom,True,Togocom,Kara,Bassar,Bassar 1,Bassar,0.78035,9.25998
+04511280b008dae7,Franchise Togocom Kante,Agence operateur,Togocom,True,Togocom,Kara,Kéran,Kéran 1,Kantè,1.04934,9.959168
+241377c7ed99b22f,Agence Togocom Kante,Agence operateur,Togocom,True,Togocom,Kara,Kéran,Kéran 1,Kantè,1.055042,9.955557
+bfc2b6ad05791aac,Agence Togocom Bafilo,Agence operateur,Togocom,True,Togocom,Kara,Assoli,Assoli 1,Bafilo,1.24398,9.354128
+1b4664c6445107c2,Agence Togocom Guérin Kouka,Agence operateur,Togocom,True,Togocom,Kara,Dankpen,Dankpen 1,Guérin-Kouka,0.608555,9.687277
+196608ced688c11b,Agence Togocom Tsevie,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Zio,Zio 1,Tsévié,1.207977,6.408835
+204a6a88bc944800,Agence Togocom Kabou Marche,Agence operateur,Togocom,True,Togocom,Kara,Bassar,Bassar 3,Kabou,0.81227,9.452945
+3137d8266819ecea,Agence Togocom Quartier Latin,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Avé,Avé 1,Kévé,0.925223,6.43472
+6d6783754a5f99c8,Agence Togocom Niamtougou,Agence operateur,Togocom,True,Togocom,Kara,Doufelgou,Doufelgou 1,Niamtougou,1.107942,9.765662
+05fe4091e4edd741,Franchise Togocom Kpetoume,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Avé,Avé 1,Assahoun,0.914285,6.449477
+b4d2f335876871b1,Agence Togocom Tabligbo,Agence operateur,Togocom,False,"Telecom, Togocom",Maritime,Yoto,Yoto 1,Tabligbo,1.500357,6.588523
+218a947201bb79b6,Franchise Togocom Agbelouve Ville,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Zio,Zio 3,Agbélouvé,1.166857,6.675085
+0312b2960a21b7fd,Agence Togocom Awassi Onorio,Agence operateur,Togocom,True,"Telecom, Togocom",Maritime,Bas-Mono,Bas-Mono 1,Afagnangan,1.628703,6.49556
+24255e3c22070510,Boutique Togocom Awassi Onorio,Agence operateur,Togocom,False,"Telecom, Togocom",Maritime,Bas-Mono,Bas-Mono 1,Afagnangan,1.62298,6.496435
+43f55d671c5a42e0,Agence Togocom Wahala,Agence operateur,Togocom,True,Togocom,Plateaux,Haho,Haho 4,Wahala,1.164827,7.174345
+1d0c383a32920d75,Agence Togocom Tohoun,Agence operateur,Togocom,True,Togocom,Plateaux,Moyen-Mono,Moyen-Mono 1,Tohoun,1.609937,7.022292
+348b02ab11677c94,Point de Vente Togocom Glei,Agence operateur,Togocom,True,Togocom,Plateaux,Ogou,Ogou 3,Gléi,1.16454,7.315633
+493818ac5f87b7c9,Agence Togocom Djodjokondji,Agence operateur,Togocom,True,Togocom,Plateaux,Kloto,Kloto 1,Agome-Kpalime,0.634639,6.90021
+92db468d5d03fdb3,Franchise Togocom Kpele Adeta,Agence operateur,Togocom,True,Togocom,Plateaux,Kpélé,Kpélé 1,Kpélé-Novivé,0.731262,7.131715
+f4d3e8f3d2f1bd1f,Agence Tococom Anie,Agence operateur,Togocom,True,Togocom,Plateaux,Anié,Anié 1,Anié,1.192847,7.764953
+adc1d2bff358dd85,Agence Togocom Notse,Agence operateur,Togocom,True,Togocom,Plateaux,Haho,Haho 3,Kpédomé,1.172087,6.964964
+c0e923ec06366781,Agence Togocom Gadzepe,Agence operateur,Togocom,True,Togocom,Plateaux,Agou,Agou 1,Agou-Tavié,0.716432,6.846996
+11a29b54c1a1d22f,Agence Togocom Dapaong,Agence operateur,Togocom,True,Togocom,Savanes,Tône,Tône 1,Dapaong,0.203478,10.862998
+cab061d9e39c6d44,Agence Togocom Cinkasse,Agence operateur,Togocom,True,Togocom,Savanes,Cinkassé,Cinkassé 1,Cinkassé,0.039664,11.087926
+4bb94e9138ea9b71,Agence Togocom Gando,Agence operateur,Togocom,True,Togocom,Savanes,Oti-Sud,Oti-Sud 1,Gando,0.746868,10.331795
+866f2e5b3a1c9480,Agence Togocom Mango,Agence operateur,Togocom,True,Togocom,Savanes,Oti,Oti 1,Mango,0.465362,10.355304
+4f504028927699a5,Lomé Data Center (LDC),Data center,—,True,Datacenter,Maritime,Golfe,Golfe 3,Bè-Ouest,1.211516,6.192486
+861be7f7ebbe9bcd,E-Gouv NOC,Data center,—,True,Datacenter,Maritime,Golfe,Golfe 4,Amoutivé,1.21105,6.128697
+31e9a696a080f75d,Cloud & Racks - Café Informatique,Data center,—,True,Datacenter,Maritime,Golfe,Golfe 5,Aflao-Gakli,1.191627,6.170299

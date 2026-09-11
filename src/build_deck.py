@@ -26,10 +26,18 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import couverture as CV                                             # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 FIGURES = ROOT / "reports" / "figures"
 SORTIE = ROOT / "reports" / "Defi1_Togo_Connectivite_numerique.pptx"
+
+# Adresse publique du tableau de bord, affichee sur la page de fin.
+# A renseigner apres le deploiement sur Streamlit Community Cloud ; tant
+# qu'elle vaut None, la page de fin renvoie vers le depot.
+URL_TABLEAU_DE_BORD = None
 
 # --- couleurs (identiques au tableau de bord) --------------------------------
 VERT = RGBColor(0x15, 0x6C, 0x52)
@@ -266,6 +274,33 @@ def main() -> None:
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = L, H
+
+    # -------------------------------------------------------- PAGE DE GARDE
+    # Les trois reperes sont calcules, jamais saisis : si une source change,
+    # la couverture change avec elle.
+    CV.page_de_garde(
+        prs,
+        titre="Connecter le Togo\nlà où le manque est prouvé",
+        these=(
+            f"Le Togo compte un point de service financier numérique pour "
+            f"{_esp(national)} habitants. Cette moyenne ne dit rien d'utile : "
+            f"entre la préfecture la mieux dotée et la moins dotée, l'écart "
+            f"est de 1 à {_fr(rapport)}.\n"
+            "Ce diagnostic désigne les territoires où investir, et publie de "
+            "quoi contester le classement."),
+        reperes=[
+            ("Habitants par point de service", _esp(national),
+             "moyenne nationale · 19 788 points géolocalisés"),
+            ("Écart entre préfectures", f"1 à {_fr(rapport)}",
+             f"{pire.prefecture} contre {mieux.prefecture}"),
+            ("Préfectures sans aucune agence", f"{len(sans_agence)} / 39",
+             f"{_esp(int(sans_agence.population.sum()))} habitants concernés"),
+        ],
+        auteur="KOUTSAVA Kossi Epiphane",
+        qualite="Analyse de données · Défi Économie numérique",
+        sources=("Géoportail national (PRISE 2021-2022) · RGPH-5, INSEED "
+                 "(novembre 2022) · limites COD-AB v02, OCHA (2021) — "
+                 "25 contrôles arithmétiques publiés"))
 
     # ---------------------------------------------------------------- 01
     s = _diapo(prs, "Défi Économie numérique · Togo",
@@ -584,6 +619,28 @@ def main() -> None:
           "d'antennes du catalogue national — c'est la première recommandation "
           "adressée au producteur de données.",
           10, False, ENCRE_2, interligne=1.32)
+
+    # ---------------------------------------------------------- PAGE DE FIN
+    CV.page_de_fin(
+        prs,
+        titre="Le diagnostic ne s'arrête pas\nà ces diapositives",
+        lignes=[
+            ("Tableau de bord", "39 préfectures, 117 communes, 19 788 points — "
+                                "cartes, fiches de territoire, repondération "
+                                "de l'indice et simulateur de couverture"),
+            ("Chaîne reproductible", "8 scripts, un rapport de contrôle par "
+                                     "étape, 25 contrôles arithmétiques rejoués "
+                                     "à chaque exécution"),
+            ("Données ouvertes", "aucune valeur imputée ; les trois pistes "
+                                 "écartées sont documentées avec leurs preuves"),
+        ],
+        url=(URL_TABLEAU_DE_BORD or
+             "Tableau de bord en ligne — adresse à renseigner "
+             "(src/build_deck.py)"),
+        auteur="KOUTSAVA Kossi Epiphane",
+        mention=("République togolaise · Défi Économie numérique · "
+                 "Un score élevé signale un besoin mesuré — ni un coût, "
+                 "ni une faisabilité, ni une rentabilité."))
 
     SORTIE.parent.mkdir(parents=True, exist_ok=True)
     prs.save(SORTIE)

@@ -29,25 +29,36 @@ ENV/
 *.pem
 *.key
 
-# Data (garder la structure, ignorer le contenu volumineux/généré)
+# Data — sources brutes et intermédiaires : hors dépôt (34 Mo + 25 Mo, et
+# rejouables par la chaîne `src/`).
 data/raw/*
 data/interim/*
-data/processed/*
 data/external/*
+data/processed/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
-!data/processed/.gitkeep
 !data/external/.gitkeep
 
+# EXCEPTION — le paquet applicatif est versionné, et il doit l'être.
+# Streamlit Cloud ne déploie que ce que le dépôt contient : sans ces dix
+# fichiers (4,5 Mo au total), l'application se déploie vide. Ils sont produits
+# et contrôlés par la chaîne, jamais édités à la main.
+!data/processed/acces_canton.csv
+!data/processed/acces_prefecture.csv
+!data/processed/dcpi_commune.csv
+!data/processed/dcpi_prefecture.csv
+!data/processed/dcpi_sensibilite.csv
+!data/processed/dcpi_variantes.csv
+!data/processed/etablissements_pts.csv
+!data/processed/indicateurs_commune.csv
+!data/processed/points_mobile_money.csv
+!data/processed/prefectures.geojson
+
 # Reports générés
-reports/figures/*
-!reports/figures/.gitkeep
 *.pdf
 *.png
 *.jpg
 *.jpeg
-!docs/**/*.png
-!docs/**/*.jpg
 
 # Logs
 *.log
@@ -67,3 +78,9 @@ htmlcov/
 # Type checkers
 .mypy_cache/
 .ruff_cache/
+
+# Livrable assemblé (rejouable par src/build_livrable.py)
+reports/tableau_de_bord_togo.zip
+
+# Fichiers temporaires Office
+~$*

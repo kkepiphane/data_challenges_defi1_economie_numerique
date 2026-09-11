@@ -1,34 +1,17 @@
-# Défi 1 — Accès aux télécommunications et aux services numériques au Togo
-# Versions figées = celles réellement utilisées pour produire les résultats.
-# Chaque bibliothèque est ici parce qu'une étape en dépend, aucune « au cas où ».
-
-# --- Manipulation et calcul ---------------------------------------------------
-pandas==2.3.3          # tables, jointures, agrégations (toute la chaîne)
-numpy==2.2.6           # normalisation min-max, tirages de sensibilité
-
-# --- Géospatial ---------------------------------------------------------------
-geopandas==1.1.4       # lecture GeoJSON/shapefile, jointures spatiales, dissolve
-shapely==2.1.2         # géométries, WKT des CSV PRISE, distances
-pyproj==3.7.1          # reprojection EPSG:4326 -> EPSG:32631 (obligatoire pour
-                       # toute distance ou superficie : en degrés elles seraient fausses)
-
-# --- Statistiques -------------------------------------------------------------
-scipy==1.15.3          # corrélation de Spearman (analyse de sensibilité du DCPI)
-
-# --- Visualisation et application --------------------------------------------
-plotly==6.9.0          # graphiques et cartes interactifs (choroplèthes, points)
-streamlit==1.61.1      # application du tableau de bord
-
-# --- Lecture des sources ------------------------------------------------------
-openpyxl==3.1.5        # lecture des exports XLSX lors de l'audit inter-formats
-
-# NOTE — outil système requis, non installable par pip :
-#   pdftotext (poppler-utils) — extraction du livret RGPH-5 de l'INSEED.
-#   Vérifier avec :  pdftotext -v
+# ----------------------------------------------------------------------------
+# DEPENDANCES DE L'APPLICATION — c'est ce fichier que Streamlit Cloud installe.
+# ----------------------------------------------------------------------------
+# Quatre bibliothèques, toutes en roues pures ou pré-compilées : le déploiement
+# ne compile rien et démarre à froid en quelques secondes.
 #
-# NON UTILISÉ, et volontairement :
-#   folium      — Plotly couvre déjà les cartes interactives et s'intègre
-#                 nativement à Streamlit ; ajouter Folium n'apporterait rien.
-#   scikit-learn— la normalisation min-max et le rang tiennent en deux lignes
-#                 de pandas ; aucune méthode d'apprentissage n'est employée.
-#   rasterio    — aucune donnée raster dans les sources retenues.
+# L'application ne calcule RIEN. Elle affiche des fichiers déjà produits et
+# contrôlés par la chaîne d'analyse. Elle n'a donc besoin ni de geopandas, ni
+# de shapely, ni de pyproj, ni de scipy — voir `src/build_app_data.py`.
+#
+# Pour REJOUER l'analyse depuis les données brutes :  requirements-chaine.txt
+# ----------------------------------------------------------------------------
+
+streamlit==1.61.1      # application
+pandas==2.3.3          # lecture et agrégation des tables
+numpy==2.2.6           # repondération de l'indice, simulations de couverture
+plotly==6.9.0          # graphiques et cartes interactifs

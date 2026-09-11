@@ -65,8 +65,36 @@ GRILLE = "#eeede8"
 AXE = "#d5d4ce"
 GRIS_FOND = "#d9d8d2"
 
-SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
-MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace'
+# =============================================================================
+# TYPOGRAPHIE
+# =============================================================================
+# INTER pour tout ce qui se lit, IBM PLEX MONO pour tout ce qui s'etiquette.
+#
+# Pourquoi pas la police systeme ? Parce qu'un tableau de bord de decision
+# affiche surtout des NOMBRES, et que les chiffres doivent s'aligner en colonne
+# d'une ligne a l'autre. Inter possede des chiffres a chasse fixe (`tnum`) que
+# les polices systeme n'exposent pas de facon fiable : sans eux, « 1 621 720 »
+# et « 8 095 498 » n'ont pas la meme largeur, et une colonne de valeurs se met
+# a danser. Inter offre aussi un `1` a empattement et un `l` a queue (`cv05`,
+# `cv08`) : un l et un 1 ne se confondent plus dans un identifiant.
+#
+# IBM Plex Mono est dessine pour s'accorder a une grotesque humaniste. Il porte
+# les sur-titres, les etiquettes et les mentions de source — tout ce qui doit
+# etre lu comme une METADONNEE et non comme un propos.
+#
+# Chaque famille garde une pile de repli complete : si les fontes Google ne
+# repondent pas, la mise en page tient sur les polices du systeme.
+POLICES_WEB = ("https://fonts.googleapis.com/css2?"
+               "family=Inter:wght@400;500;600;700&"
+               "family=IBM+Plex+Mono:wght@400;500;600&display=swap")
+
+SANS = "'Inter', system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
+MONO = ("'IBM Plex Mono', ui-monospace, \"SF Mono\", \"Cascadia Mono\", "
+        "Menlo, Consolas, monospace")
+
+# Chiffres a chasse fixe + `1` et `l` differencies. Applique partout ou une
+# valeur est censee s'aligner sur celle du dessus.
+CHIFFRES = "font-feature-settings: 'tnum' 1, 'cv05' 1, 'cv08' 1; font-variant-numeric: tabular-nums;"
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 
@@ -109,7 +137,11 @@ def enregistrer_template() -> str:
 # =============================================================================
 CSS = f"""
 <style>
-  .stApp {{ background: {PLAN}; }}
+  @import url('{POLICES_WEB}');
+
+  html, body, .stApp, [class*="st-"] {{ font-family: {SANS}; }}
+  .stApp {{ background: {PLAN}; -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale; }}
   .block-container {{ padding: 0 2.2rem 3rem 2.2rem; max-width: 1680px; }}
   header[data-testid="stHeader"] {{ background: transparent; height: 0; }}
   #MainMenu, footer {{ visibility: hidden; }}
@@ -131,7 +163,8 @@ CSS = f"""
       font-family: {MONO}; font-size: 0.66rem; letter-spacing: 0.16em;
       text-transform: uppercase; color: {ENCRE_MUET}; margin-bottom: 0.45rem;
   }}
-  .bandeau h1 {{ font-size: 1.95rem; font-weight: 640; line-height: 1.1; }}
+  .bandeau h1 {{ font-size: 1.95rem; font-weight: 660; line-height: 1.08;
+                 letter-spacing: -0.024em; }}
   .bandeau .sous {{
       font-size: 0.92rem; color: {ENCRE_2}; margin-top: 0.5rem;
       max-width: 62ch; line-height: 1.5;
@@ -162,8 +195,9 @@ CSS = f"""
       text-transform: uppercase; color: {ENCRE_MUET}; line-height: 1.5;
       min-height: 2.1em; display: block;
   }}
-  .kpi .val {{ font-size: 2.15rem; font-weight: 660; color: {ENCRE};
-               line-height: 1.05; margin-top: 0.25rem; }}
+  .kpi .val {{ font-size: 2.15rem; font-weight: 680; color: {ENCRE};
+               line-height: 1.05; margin-top: 0.25rem;
+               letter-spacing: -0.022em; {CHIFFRES} }}
   .kpi .unite {{ font-size: 0.92rem; font-weight: 500; color: {ENCRE_2};
                  margin-left: 0.28rem; }}
   .kpi .note {{ font-size: 0.74rem; color: {ENCRE_2}; margin-top: 0.55rem;
@@ -173,8 +207,8 @@ CSS = f"""
                display: inline-block; flex: 0 0 7px; }}
 
   /* ---------- chiffre hero ---------- */
-  .hero-val {{ font-size: 4.1rem; font-weight: 680; color: {ENCRE};
-               line-height: 0.98; letter-spacing: -0.035em; }}
+  .hero-val {{ font-size: 4.1rem; font-weight: 700; color: {ENCRE};
+               line-height: 0.98; letter-spacing: -0.038em; {CHIFFRES} }}
   .hero-un {{ font-size: 1.15rem; font-weight: 500; color: {ENCRE_2};
               margin-left: 0.45rem; }}
   .hero-txt {{ font-size: 0.95rem; color: {ENCRE_2}; line-height: 1.62;
@@ -208,8 +242,8 @@ CSS = f"""
       padding: 0.85rem 1.1rem; margin-bottom: 0.55rem;
       display: flex; align-items: center; gap: 1.1rem;
   }}
-  .prio .rang {{ font-family: {MONO}; font-size: 1.35rem; font-weight: 700;
-                 color: {VERT}; min-width: 2.1rem; }}
+  .prio .rang {{ font-family: {MONO}; font-size: 1.3rem; font-weight: 600;
+                 color: {VERT}; min-width: 2.1rem; {CHIFFRES} }}
   .prio .nom {{ font-size: 1rem; font-weight: 620; color: {ENCRE};
                 min-width: 9.5rem; }}
   .prio .det {{ font-size: 0.8rem; color: {ENCRE_2}; line-height: 1.5; }}
@@ -244,6 +278,8 @@ CSS = f"""
   }}
 
   /* ---------- divers ---------- */
+  div[data-testid="stDataFrame"] {{ {CHIFFRES} }}
+  div[data-testid="stMetricValue"] {{ {CHIFFRES} }}
   div[data-testid="stExpander"] {{ border: 1px solid {BORDURE};
                                    border-radius: 10px; background: {SURFACE}; }}
   .stTabs [data-baseweb="tab-list"] {{ gap: 1.4rem; border-bottom: 1px solid {BORDURE}; }}
