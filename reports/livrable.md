@@ -25,6 +25,7 @@ declaree valide.
 | Feuille de style réémise à chaque rendu | OK | 4 rendus successifs : [True, True, True, True] |
 | Feuille de style conservée après navigation | OK | clic sur « Arbitrage » dans la navigation |
 | Aucun sélecteur large n'écrase la fonte des icônes | OK | fonte symbole préservée |
+| « Select all » masqué dans les filtres | OK | règle CSS présente et clé `__select_all__` confirmée dans Streamlit |
 | Le sommaire refermé reste réouvrable | OK | « Deploy » masqué seul, bouton de réouverture conservé |
 | Départs rapides de pondération sans exception | OK | 4 préréglages appliqués |
 | Repondération de référence = DCPI publié | OK | écart max 7.11e-15 · corrélation des rangs 1.0000 |

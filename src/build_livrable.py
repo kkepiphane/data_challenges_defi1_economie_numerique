@@ -199,6 +199,28 @@ def _verifier(dossier: Path) -> list[tuple[str, bool, str]]:
                       "; ".join(pieges) if pieges
                       else "fonte symbole préservée"))
 
+    # NON-REGRESSION — « Select all », seule chaine anglaise de l'interface.
+    # Streamlit l'ecrit en dur dans son paquet JavaScript et n'expose aucun
+    # reglage : elle est masquee par le CSS, sur la cle `__select_all__` que
+    # porte l'option. Ce controle verifie les DEUX moitiés de l'hypothese —
+    # la regle existe, et la cle sur laquelle elle s'appuie existe encore dans
+    # la version de Streamlit installee. Si Streamlit la renomme, le masquage
+    # cesse silencieusement d'operer : seul ce controle le verrait.
+    regle = "__select_all__" in style
+    try:
+        import streamlit as _st
+        statique = (Path(_st.__file__).parent / "static" / "static" / "js")
+        cle = any("__select_all__" in f.read_text(encoding="utf-8",
+                                                  errors="ignore")
+                  for f in statique.glob("Multiselect*.js"))
+    except Exception:
+        cle = False
+    controles.append(
+        ("« Select all » masqué dans les filtres", regle and cle,
+         "règle CSS présente et clé `__select_all__` confirmée dans Streamlit"
+         if regle and cle else
+         f"règle CSS : {regle} · clé présente dans Streamlit : {cle}"))
+
     # NON-REGRESSION — le bouton qui reouvre la barre laterale loge DANS la
     # barre d'outils de Streamlit, aux cotes de « Deploy ». Masquer la barre
     # d'outils entiere pour faire disparaitre « Deploy » emporte ce bouton :

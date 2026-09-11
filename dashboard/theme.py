@@ -354,10 +354,13 @@ CSS = f"""
   .prio .det b {{ color: {ENCRE}; font-weight: 600; }}
 
   /* Sur-titre de section */
+  /* Le retrait a gauche vaut celui du texte des entrees (filet de 2 px +
+     0,7 rem de marge interieure) : intertitres et intitules partagent ainsi
+     une seule et meme verticale. */
   .sb-groupe {{
       font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
-      color: {ENCRE_MUET}; font-weight: 600; padding: 0 0 0.3rem 0;
-      margin: 0;
+      color: {ENCRE_MUET}; font-weight: 600;
+      padding: 0 0 0.3rem calc(0.7rem + 2px); margin: 0;
   }}
 
   /* =====================================================================
@@ -385,6 +388,13 @@ CSS = f"""
   }}
   section[data-testid="stSidebar"] div[class*="st-key-navgrp"] {{
       padding-top: 0.5rem;
+  }}
+  /* La marque deborde de son conteneur de 16 px — meme cause que les
+     intertitres, mesuree : 56,1 px de contenu pour 40,1 px de conteneur. Le
+     premier groupe doit donc s'ecarter, sinon son intertitre passe sous le
+     filet de la marque. */
+  section[data-testid="stSidebar"] div[class*="st-key-navgrp0"] {{
+      margin-top: 1.2rem;
   }}
   /* Le conteneur d'un fragment HTML brut ne prend PAS la hauteur de son
      contenu (mesure : 4,94 px pour une etiquette qui en occupe 20,9), et
@@ -430,6 +440,42 @@ CSS = f"""
   section[data-testid="stSidebar"] button[kind="primary"] p,
   section[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] p {{
       font-weight: 600;
+  }}
+
+  /* ---------- filtres ----------
+     Les champs de Streamlit arrivent en boites blanches a coins arrondis :
+     seuls elements de toute l'interface a ressembler a un formulaire de
+     logiciel. Ils sont ramenes a un simple filet souligne, comme un champ
+     a remplir sur un imprime. */
+  /* La boite visible est le premier enfant du ComboBox. `react-aria-ComboBox`
+     est un nom SEMANTIQUE, pas une empreinte d'emotion : il ne change pas a
+     chaque version de Streamlit, contrairement aux classes voisines. */
+  section[data-testid="stSidebar"] .react-aria-ComboBox > div {{
+      background: transparent !important; border: none !important;
+      border-bottom: 1px solid {FILET_FORT} !important;
+      border-radius: 0 !important; box-shadow: none !important;
+  }}
+  section[data-testid="stSidebar"] .react-aria-ComboBox:focus-within > div {{
+      border-bottom-color: {VERT} !important;
+  }}
+  section[data-testid="stSidebar"] [data-testid="stMultiSelect"] input {{
+      font-family: {SERIF}; font-size: 0.93rem;
+  }}
+
+  /* « Select all » — la seule chaine anglaise de toute l'interface. Streamlit
+     l'ecrit en dur dans son paquet JavaScript et n'expose aucun reglage pour
+     la retirer ; elle est donc masquee par le CSS, sur la cle stable que
+     porte l'option. La liste est virtualisee et positionne ses lignes en
+     absolu : masquer l'option laisserait un vide de 40 px en tete, d'ou la
+     remontee compensatoire.
+     LES DEUX REGLES DEPENDENT DU MEME MARQUEUR : si une version future de
+     Streamlit le renomme, aucune des deux ne s'applique et l'on retrouve le
+     comportement d'origine — jamais une liste decalee. */
+  [role="listbox"] div[role="presentation"]:has(> [data-key="__select_all__"]) {{
+      display: none !important;
+  }}
+  [role="listbox"]:has([data-key="__select_all__"]) > div[role="presentation"] {{
+      margin-top: -40px;
   }}
 
   /* =====================================================================
@@ -526,8 +572,7 @@ def entete(mention: str = "Données ouvertes · PRISE 2021-2022 · RGPH-5 2022")
 def marque_laterale() -> str:
     """Identite en tete de la barre laterale, avant le sommaire."""
     return (f'<div class="{MARQUEUR} sb-marque">'
-            f'<b>République togolaise</b><br>Défi Économie numérique<br>'
-            f'<em>Données ouvertes · 2021-2022</em></div>')
+            f'<b>République togolaise</b><br>Défi Économie numérique</div>')
 
 
 def bandeau(eyebrow: str, titre: str, question: str) -> str:
