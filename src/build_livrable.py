@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "reports" / "tableau_de_bord_togo.zip"
 RACINE_ARCHIVE = "tableau_de_bord_togo"
 
-# Les quatorze fichiers lus par l'application. La liste est EXPLICITE : embarquer
+# Les quinze fichiers lus par l'application. La liste est EXPLICITE : embarquer
 # `data/processed/*` entrainerait les 5 Mo de la table WKT d'origine, que
 # l'application n'ouvre jamais.
 DONNEES = [
@@ -52,7 +52,7 @@ DONNEES = [
     "etablissements_pts.csv", "indicateurs_commune.csv",
     "points_mobile_money.csv", "prefectures.geojson",
     "zones_blanches_canton.csv", "zones_blanches_variantes.csv",
-    "cantons.geojson", "vide_temoins.csv",
+    "cantons.geojson", "vide_temoins.csv", "acces_operateur_prefecture.csv",
 ]
 
 # Les sept pages, lues telles que l'application les nomme. La liste n'est pas
@@ -83,7 +83,7 @@ suffisent : ni compilation, ni outil système, ni base de données.
 | Dossier | Contenu |
 |---|---|
 | `dashboard/` | l'application : 8 pages, cartes, fiches de territoire |
-| `data/processed/` | les 14 fichiers lus par l'application |
+| `data/processed/` | les 15 fichiers lus par l'application |
 | `reports/` | un rapport de contrôle par étape de la chaîne d'analyse |
 
 ## Les huit pages

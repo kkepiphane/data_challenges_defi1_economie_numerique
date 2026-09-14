@@ -68,6 +68,49 @@ A_PUBLIER = [
 ]
 
 
+def _centile(s: pd.Series) -> pd.Series:
+    """Rang centile 0-100, ex aequo au rang moyen — comme la chaine."""
+    return (s.rank(method="average") - 1) / (len(s) - 1) * 100
+
+
+@st.cache_data(show_spinner=False)
+def par_operateur(operateur: str) -> pd.DataFrame:
+    """Score de risque recalcule sur les SEULS temoins d'un operateur.
+
+    La couverture est propre a chaque reseau : un canton couvert par Togocom
+    peut etre une zone blanche pour un abonne Moov. Pour un operateur :
+      - eloignement : distance du canton a SES agences ;
+      - rarete : SES agents au km² ;
+      - presence operateur : SANS OBJET (un seul operateur par definition) ;
+      - densite : inchangee.
+    Les rangs centiles portent toujours sur les 373 cantons, avant tout filtre
+    territorial, et les regles de classe sont celles de la chaine.
+    """
+    t = D.zones_blanches()
+    if operateur == "Tous":
+        return t
+    t = t.copy()
+    s = operateur.lower()
+    t["n_mm"] = t[f"n_{s}"]
+    t["dist_agence_km"] = t[f"dist_agence_{s}_km"]
+    t["part_vide_10km"] = t[f"part_vide_10km_{s}"]
+    t["mm_100km2"] = t.n_mm / t.area_sqkm * 100
+    t["r1_eloignement"] = _centile(t.dist_agence_km)
+    t["r2_rarete_temoins"] = _centile(-t.mm_100km2)
+    t["r3_presence_operateur"] = float("nan")
+    t["score_risque"] = t[["r1_eloignement", "r2_rarete_temoins",
+                           "r4_faible_densite"]].mean(axis=1)
+    t["rang_risque"] = t.score_risque.rank(ascending=False,
+                                           method="min").astype(int)
+    eleve, surveiller = t.score_risque.quantile([0.90, 0.75])
+    t["sans_temoin"] = t.n_mm == 0
+    t["classe"] = "Faible"
+    t.loc[t.score_risque >= surveiller, "classe"] = "À surveiller"
+    t.loc[(t.score_risque >= eleve) | t.sans_temoin, "classe"] = "Élevé"
+    t["frequence_top"] = float("nan")      # sensibilite non recalculee ici
+    return t.sort_values("rang_risque")
+
+
 def _carte(zb: pd.DataFrame, geo: dict, pref_vue: pd.DataFrame,
            mode: str, vide: pd.DataFrame | None) -> go.Figure:
     fig = go.Figure()
@@ -147,8 +190,10 @@ def _choisir_canton() -> None:
 
 
 def afficher(ctx: dict) -> None:
-    zb_all = D.zones_blanches()
+    op = ctx["operateur"]
+    zb_all = par_operateur(op)
     zb = zb_all[zb_all.prefecture.isin(ctx["prefectures"])]
+    avec_op = "" if op == "Tous" else f" · {op}"
     pref = D.prefectures()
     pref_vue = pref[pref.prefecture.isin(ctx["prefectures"])]
     geo = D.geojson_cantons()
@@ -194,23 +239,35 @@ def afficher(ctx: dict) -> None:
     surface_vide = (zb.part_vide_10km * zb.area_sqkm).sum() / max(zb.area_sqkm.sum(), 1)
     variantes = D.zones_blanches_variantes()
     k = st.columns(4, gap="small")
-    k[0].markdown(T.kpi("Cantons à risque élevé", f"{len(eleve)}",
+    k[0].markdown(T.kpi(f"Cantons à risque élevé{avec_op}", f"{len(eleve)}",
                         f"/ {len(zb)}",
                         "top 10 % du score national, ou aucun agent",
                         T.STATUT["critique"]), unsafe_allow_html=True)
-    k[1].markdown(T.kpi("Cantons sans aucun agent Mobile Money",
+    k[1].markdown(T.kpi(f"Cantons sans aucun agent Mobile Money{avec_op}",
                         f"{len(sans)}", "",
                         f"{sans.area_sqkm.sum():,.0f} km² sans témoin de couverture"
                         .replace(",", " "), T.STATUT["critique"]),
                   unsafe_allow_html=True)
-    k[2].markdown(T.kpi("Surface à plus de 10 km de tout agent",
+    k[2].markdown(T.kpi(f"Surface à plus de 10 km de tout agent{avec_op}",
                         f"{surface_vide * 100:.1f}".replace(".", ","), "%",
                         "grille de 1 km, distance au témoin le plus proche",
                         T.STATUT["attention"]), unsafe_allow_html=True)
-    k[3].markdown(T.kpi("Stabilité du classement",
-                        f"{variantes.spearman.min():.2f}".replace(".", ","), "",
-                        "corrélation minimale, retrait de chaque composante",
-                        T.STATUT["bon"]), unsafe_allow_html=True)
+    if op == "Tous":
+        k[3].markdown(T.kpi("Stabilité du classement",
+                            f"{variantes.spearman.min():.2f}".replace(".", ","),
+                            "", "corrélation minimale, retrait de chaque "
+                            "composante", T.STATUT["bon"]),
+                      unsafe_allow_html=True)
+    else:
+        # Ce que la lecture par operateur apporte : des cantons qui ne
+        # ressortent pas quand les deux reseaux sont confondus.
+        tous = D.zones_blanches()
+        deja = set(tous[tous.classe == "Élevé"].adm3_pcode)
+        propres = eleve[~eleve.adm3_pcode.isin(deja)]
+        k[3].markdown(T.kpi(f"À risque pour {op} seulement",
+                            f"{len(propres)}", "",
+                            "cantons absents de la lecture tous opérateurs",
+                            T.SERIE_1), unsafe_allow_html=True)
 
     st.markdown("")
     g, d = st.columns([2.2, 1], gap="medium")
@@ -224,7 +281,11 @@ def afficher(ctx: dict) -> None:
             "<b>Quatre composantes à poids égaux</b>, chacune en rang centile "
             "sur les 373 cantons : distance à l'agence la plus proche, agents "
             "Mobile Money au km², nombre d'opérateurs identifiés parmi ces "
-            "agents, densité de population de la préfecture."),
+            "agents, densité de population de la préfecture." if op == "Tous"
+            else f"<b>Score recalculé pour {op}</b> : distance à ses agences, "
+            "densité de ses agents, densité de population. La composante "
+            "« présence opérateur » est sans objet pour un seul réseau, et la "
+            "robustesse publiée porte sur la lecture tous opérateurs."),
             unsafe_allow_html=True)
         par_pref = (eleve.groupby("prefecture").size()
                     .sort_values(ascending=False))
@@ -245,11 +306,13 @@ def afficher(ctx: dict) -> None:
                    if communs else "")), unsafe_allow_html=True)
 
     with g:
-        with T.bloc("Zones à risque de zone blanche · par canton · cliquez un "
-                    "canton pour son détail"):
+        with T.bloc(f"Zones à risque de zone blanche{avec_op} · par canton · "
+                    "cliquez un canton pour son détail"):
             vide = None
             if montrer_vide:
                 vide = D.vide_temoins()
+                col_d = "dist_km" if op == "Tous" else f"dist_{op.lower()}_km"
+                vide = vide[vide[col_d] > 10]
                 # Filtre spatial grossier sur l'emprise des prefectures vues :
                 # suffisant pour l'affichage, sans bibliotheque geometrique.
                 if ctx["filtre_actif"]:
@@ -283,9 +346,16 @@ def afficher(ctx: dict) -> None:
             t.columns = ["Rang", "Canton", "Préfecture", "Agents MM",
                          "Opérateurs", "Agence (km)", "Surface > 10 km",
                          "Stabilité", "Score"]
+            if op != "Tous":
+                t = t.drop(columns="Stabilité").rename(columns={
+                    "Agents MM": f"Agents {op}",
+                    "Agence (km)": f"Agence {op} (km)",
+                    "Opérateurs": "Opérateurs (tous)"})
+            formats = {"Agence (km)": "{:.0f}", f"Agence {op} (km)": "{:.0f}",
+                       "Surface > 10 km": "{:.0%}", "Stabilité": "{:.0%}",
+                       "Score": "{:.1f}"}
             st.dataframe(t.style.format({
-                "Agence (km)": "{:.0f}", "Surface > 10 km": "{:.0%}",
-                "Stabilité": "{:.0%}", "Score": "{:.1f}"},
+                c: f for c, f in formats.items() if c in t.columns},
                 thousands=" ", decimal=","),
                 width="stretch", hide_index=True, height=400)
             st.download_button("Télécharger les zones à investiguer (CSV)",
@@ -293,10 +363,11 @@ def afficher(ctx: dict) -> None:
                                      ctx),
                                "zones_a_investiguer.csv", "text/csv",
                                icon=":material/download:", key="dl_zb")
-            st.markdown(T.source(
-                "« Stabilité » : part des 2 000 pondérations aléatoires pour "
-                "lesquelles le canton reste dans le top 10 % national."),
-                unsafe_allow_html=True)
+            if op == "Tous":
+                st.markdown(T.source(
+                    "« Stabilité » : part des 2 000 pondérations aléatoires "
+                    "pour lesquelles le canton reste dans le top 10 % "
+                    "national."), unsafe_allow_html=True)
 
     with d2:
         options = zb.sort_values("rang_risque")
@@ -310,11 +381,13 @@ def afficher(ctx: dict) -> None:
         r = zb[zb.adm3_pcode == code].iloc[0]
         with T.bloc(f"{r.canton} · rang {int(r.rang_risque)} sur 373"):
             fig = go.Figure()
-            for col, lib, coul in COMPOSANTES:
+            actives = [(c, l, k) for c, l, k in COMPOSANTES if pd.notna(r[c])]
+            for col, lib, coul in actives:
+                part = r[col] / len(actives)
                 fig.add_trace(go.Bar(
-                    x=[r[col] / 4], y=["Score"], orientation="h", name=lib,
+                    x=[part], y=["Score"], orientation="h", name=lib,
                     marker=dict(color=coul, line=dict(width=2, color=T.SURFACE)),
-                    text=[f"{r[col] / 4:.0f}"], textposition="inside",
+                    text=[f"{part:.0f}"], textposition="inside",
                     insidetextanchor="middle",
                     textfont=dict(size=11, color=T.SURFACE),
                     hovertemplate=f"<b>{lib}</b><br>centile {r[col]:.0f}"

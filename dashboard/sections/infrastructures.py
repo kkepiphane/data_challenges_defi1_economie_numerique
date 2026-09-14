@@ -53,7 +53,8 @@ INDICATEURS = {
 
 
 def afficher(ctx: dict) -> None:
-    pref = D.prefectures()
+    pref = D.prefectures_operateur(ctx["operateur"])
+    op = D.libelle_operateur(ctx)
     vue = pref[pref.prefecture.isin(ctx["prefectures"])]
     geo = D.geojson_prefectures()
     etab = D.etablissements()
@@ -69,14 +70,23 @@ def afficher(ctx: dict) -> None:
 
     with g:
         with T.bloc("Ce que la carte affiche"):
-            cats = ["Agence Moov", "Agence Togocom", "Data center"]
+            couleurs = dict(zip(["Agence Moov", "Agence Togocom", "Data center"],
+                                T.CATEGORIEL))
+            # Les centres de donnees n'appartiennent a aucun operateur : ils
+            # restent affiches quel que soit le filtre.
+            cats = [c for c in couleurs if ctx["operateur"] == "Tous"
+                    or c in (f"Agence {ctx['operateur']}", "Data center")]
             sel = st.multiselect("Type", cats, default=cats,
                                  label_visibility="collapsed")
-            fond = st.toggle("Fond des 19 788 points Mobile Money", value=True)
+            mm = D.mobile_money_operateur(ctx["operateur"])
+            fond = st.toggle(
+                f"Fond des {len(mm):,} points Mobile Money".replace(",", " ")
+                + ("" if ctx["operateur"] == "Tous" else f" {op}"), value=True)
 
         pts = etab_vue[etab_vue.categorie.isin(sel)]
         st.markdown("")
-        for cat, coul in zip(cats, T.CATEGORIEL):
+        for cat in cats:
+            coul = couleurs[cat]
             n = int((pts.categorie == cat).sum())
             st.markdown(T.kpi(cat, f"{n}", "",
                               "sur le territoire sélectionné", coul),
@@ -88,7 +98,8 @@ def afficher(ctx: dict) -> None:
                 "Implantation des équipements télécoms · limites régionales en "
                 "trait sombre, préfectorales en liseré blanc"):
             couches = []
-            for cat, coul in zip(cats, T.CATEGORIEL):
+            for cat in cats:
+                coul = couleurs[cat]
                 s = pts[pts.categorie == cat]
                 couches.append({
                     "nom": cat, "couleur": coul,
@@ -97,11 +108,8 @@ def afficher(ctx: dict) -> None:
                               f"<span style='color:#8b8a84'>{r}</span>"
                               for n, c, p, r in zip(s.etab_nom, s.commune,
                                                     s.prefecture, s.region)]})
-            mm = None
-            if fond:
-                mm = D.mobile_money()
-                mm = mm[mm.prefecture.isin(ctx["prefectures"])]
-            st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, mm),
+            fond_mm = mm[mm.prefecture.isin(ctx["prefectures"])] if fond else None
+            st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, fond_mm),
                             width="stretch", config={"displayModeBar": False})
 
     st.markdown(
@@ -131,6 +139,13 @@ def afficher(ctx: dict) -> None:
     with d2:
         st.markdown(T.question(question), unsafe_allow_html=True)
         st.markdown(T.lecture(lecture), unsafe_allow_html=True)
+        if ctx["operateur"] != "Tous" and col != "densite_hab_km2":
+            st.markdown(T.source(
+                "Score calculé tous opérateurs confondus : le filtre "
+                "opérateur ne s'y applique pas." if col == "DCPI" else
+                f"Valeurs calculées pour <b>{op}</b> seul. Le commentaire "
+                "ci-dessus décrit l'ensemble des opérateurs."),
+                unsafe_allow_html=True)
         t = vue.dropna(subset=[col]).nlargest(6, col)[["prefecture", col]]
         st.markdown('<div class="carte-t" style="margin-top:1.1rem">'
                     'Six valeurs les plus élevées</div>', unsafe_allow_html=True)

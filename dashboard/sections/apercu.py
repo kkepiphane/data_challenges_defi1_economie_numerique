@@ -21,7 +21,8 @@ import theme as T
 
 
 def afficher(ctx: dict) -> None:
-    pref = D.prefectures()
+    pref = D.prefectures_operateur(ctx["operateur"])
+    op = D.libelle_operateur(ctx)
     vue = pref[pref.prefecture.isin(ctx["prefectures"])]
     geo = D.geojson_prefectures()
 
@@ -40,10 +41,11 @@ def afficher(ctx: dict) -> None:
     # ======================================================= hero + carte
     g, d = st.columns([1, 1.42], gap="medium")
 
+    agence_de = ("d'opérateur" if ctx["operateur"] == "Tous" else op)
     with g:
         st.markdown(
             f'<div class="carte" style="padding:1.5rem 1.6rem 1.6rem 1.6rem">'
-            f'<div class="carte-t">Desserte en services numériques · 2022</div>'
+            f'<div class="carte-t">Desserte en services numériques · 2022 · {op}</div>'
             f'<div class="hero-val">{national:,.0f}'
             f'<span class="hero-un">habitants / point</span></div>'
             f'<div class="hero-txt">'
@@ -54,7 +56,7 @@ def afficher(ctx: dict) -> None:
             f"habitants par point, <b>{mieux.prefecture}</b> en compte "
             f"{mieux.hab_par_point_mm:,.0f}.<br><br>"
             f"<b>{len(sans_agence)} préfectures sur 39</b> n'ont aucune agence "
-            f"d'opérateur active — soit "
+            f"{agence_de} active — soit "
             f"<b>{sans_agence.population.sum() / D.POPULATION_NATIONALE:.0%} "
             f"de la population</b>."
             f'</div></div>'.replace(",", " "),
@@ -79,11 +81,15 @@ def afficher(ctx: dict) -> None:
          "", "Recensement RGPH-5, novembre 2022", T.VERT),
         ("Points Mobile Money recensés",
          f"{int(pref.points_mm.sum()):,}".replace(",", " "), "",
-         "tous géolocalisés, dans les 117 communes", T.VERT),
+         "tous géolocalisés, dans les 117 communes" if ctx["operateur"] == "Tous"
+         else f"où {op} est présent · un point partagé compte pour chacun",
+         T.VERT),
         ("Agences d'opérateur actives", f"{int(pref.agences_actives.sum())}", "",
-         "2 opérateurs — Moov et Togocom", T.SERIE_1),
+         "2 opérateurs — Moov et Togocom" if ctx["operateur"] == "Tous"
+         else f"agences {op} uniquement", T.SERIE_1),
         ("Préfectures sans aucune agence", f"{len(sans_agence)}", "/ 39",
-         f"{int(sans_agence.population.sum()):,} habitants".replace(",", " "),
+         f"{int(sans_agence.population.sum()):,} habitants".replace(",", " ")
+         + ("" if ctx["operateur"] == "Tous" else f" · agence {op}"),
          T.STATUT["critique"]),
         ("Centres de données", f"{int(pref.data_centers.sum())}", "",
          "les trois sont à Lomé", T.STATUT["attention"]),

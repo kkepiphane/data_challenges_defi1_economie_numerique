@@ -66,6 +66,9 @@ C'est une liste de zones a investiguer en priorite.
 | Chaque canton rattache a une prefecture validee | OK | 39 prefectures |
 | Grille de 1 km : surface couverte a 1 % pres | OK | 57 261 km² pour 57 242 km² |
 | Cantons sans agent : score median au-dela du 75e centile | OK | centile median 97 |
+| Distances tous operateurs = acces_canton.csv | OK | ecart max 6.51e-05 km |
+| Mediane prefectorale recalculee = valeur publiee | OK | ecart max 0.00e+00 km |
+| Distances par operateur : 39 prefectures x 2 | OK | 78 lignes |
 | Contours cantonaux : 373 entites non vides | OK | 242 Ko |
 
 ## 5. Limites
