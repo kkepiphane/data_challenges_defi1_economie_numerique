@@ -105,7 +105,8 @@ def main() -> None:
 
     # ================================================================ sources
     a3 = gpd.read_file(f"zip://{BOUNDARIES}!tgo_admin3.geojson")[
-        ["adm3_name", "adm3_pcode", "adm2_pcode", "area_sqkm", "geometry"]]
+        ["adm3_name", "adm3_pcode", "adm2_pcode", "area_sqkm", "center_lat",
+         "center_lon", "geometry"]]
     acc = pd.read_csv(PROCESSED / "acces_canton.csv")[
         ["adm3_pcode", "dist_agence_km"]]
     reco = pd.read_csv(PROCESSED / "reconciliation_prefectures.csv")[
@@ -156,6 +157,63 @@ def main() -> None:
         dist_temoin_max_km=("d_km", "max"))
     c = c.merge(vide, left_on="adm3_pcode", right_index=True, how="left")
 
+    # ======================================== declinaison PAR OPERATEUR
+    # Le tableau de bord propose un filtre Operateur. La couverture etant
+    # propre a chaque reseau, les temoins et les agences d'un operateur sont
+    # mesures separement : distance du canton a SES agences, vide de SES agents.
+    etab = pd.read_csv(PROCESSED / "etablissements_pts.csv")
+    agences = etab[(etab.type_infrastructure == "Agence operateur") & etab.actif]
+    centres = gpd.GeoDataFrame(
+        a3[["adm3_pcode"]],
+        geometry=gpd.points_from_xy(a3.center_lon, a3.center_lat),
+        crs=CRS_GEO).to_crs(CRS_M)
+    cxy = np.c_[centres.geometry.x, centres.geometry.y]
+    gxy = np.c_[grille.geometry.x, grille.geometry.y]
+
+    def _xy(df: pd.DataFrame) -> np.ndarray:
+        p = gpd.GeoSeries(gpd.points_from_xy(df.lon, df.lat), crs=CRS_GEO).to_crs(CRS_M)
+        return np.c_[p.x, p.y]
+
+    dist_tous = cKDTree(_xy(agences)).query(cxy)[0] / 1000
+    ecart_dist = float(np.abs(dist_tous - centres[["adm3_pcode"]].merge(
+        acc, on="adm3_pcode").dist_agence_km.to_numpy()).max())
+    for op in ("Moov", "Togocom"):
+        s = op.lower()
+        d_ag = cKDTree(_xy(agences[agences.operateur == op])).query(cxy)[0] / 1000
+        c = c.merge(pd.DataFrame({"adm3_pcode": centres.adm3_pcode,
+                                  f"dist_agence_{s}_km": d_ag}),
+                    on="adm3_pcode", how="left")
+        temoins = mm[mm.operateur_unitaire == op].drop_duplicates("FID")
+        grille[f"d_{s}_km"] = cKDTree(_xy(temoins)).query(gxy)[0] / 1000
+        part = (grille[f"d_{s}_km"] > RAYON_TEMOIN_KM).groupby(
+            grille.adm3_pcode).mean().rename(f"part_vide_10km_{s}")
+        c = c.merge(part, left_on="adm3_pcode", right_index=True, how="left")
+
+    def med_ponderee(valeurs: pd.Series, poids: pd.Series) -> float:
+        """Meme agregation que src/spatial_access.py (mediane ponderee par
+        la superficie, par unite COD-AB, puis minimum par prefecture)."""
+        o = np.argsort(valeurs.values)
+        v, p = valeurs.values[o], poids.values[o]
+        return float(v[np.searchsorted(np.cumsum(p) / p.sum(), 0.5)])
+
+    def _agreger(col: str) -> pd.DataFrame:
+        a = (c.groupby("adm2_pcode").apply(lambda g: pd.Series({
+            "med": med_ponderee(g[col], g.area_sqkm), "max": g[col].max(),
+            "prefecture": g.prefecture.iloc[0]}), include_groups=False))
+        return a.groupby("prefecture").agg(
+            dist_agence_med_canton_km=("med", "min"),
+            dist_agence_max_canton_km=("max", "max")).reset_index()
+
+    verif = _agreger("dist_agence_km").merge(
+        pd.read_csv(PROCESSED / "acces_prefecture.csv")[
+            ["prefecture", "dist_agence_med_canton_km"]],
+        on="prefecture", suffixes=("", "_publie"))
+    ecart_pref = float((verif.dist_agence_med_canton_km
+                        - verif.dist_agence_med_canton_km_publie).abs().max())
+    pd.concat([_agreger(f"dist_agence_{op.lower()}_km").assign(operateur=op)
+               for op in ("Moov", "Togocom")]).to_csv(
+        PROCESSED / "acces_operateur_prefecture.csv", index=False)
+
     # ================================================================ score
     c["r1_eloignement"] = centile(c.dist_agence_km)
     c["r2_rarete_temoins"] = centile(-c.mm_100km2)
@@ -196,6 +254,8 @@ def main() -> None:
               "population", "densite_hab_km2", "dist_agence_km", "n_mm",
               "n_moov", "n_togocom", "n_operateurs", "mm_100km2",
               "part_vide_10km", "dist_temoin_moy_km", "dist_temoin_max_km",
+              "dist_agence_moov_km", "dist_agence_togocom_km",
+              "part_vide_10km_moov", "part_vide_10km_togocom",
               *COMPOSANTES, "score_risque", "rang_risque", "classe",
               "sans_temoin", "frequence_top"]
     sortie = (c[garder].rename(columns={"adm3_name": "canton",
@@ -222,12 +282,17 @@ def main() -> None:
 
     # Mailles de 2 km : un point sur quatre de la grille de 1 km suffit a
     # l'affichage national et divise le fichier par quatre.
-    g2 = grille[grille.vide].copy()
+    # Une maille est gardee si elle est vide pour AU MOINS une lecture (tous
+    # operateurs, Moov seul, Togocom seul) : l'application filtre ensuite.
+    g2 = grille[grille.vide | (grille.d_moov_km > RAYON_TEMOIN_KM)
+                | (grille.d_togocom_km > RAYON_TEMOIN_KM)].copy()
     g2 = g2[(np.round((g2.geometry.x - xmin) / PAS_GRILLE_M) % 2 == 0)
             & (np.round((g2.geometry.y - ymin) / PAS_GRILLE_M) % 2 == 0)]
     g2 = g2.to_crs(CRS_GEO)
     pd.DataFrame({"lon": g2.geometry.x.round(4), "lat": g2.geometry.y.round(4),
-                  "dist_km": g2.d_km.round(1)}).to_csv(
+                  "dist_km": g2.d_km.round(1),
+                  "dist_moov_km": g2.d_moov_km.round(1),
+                  "dist_togocom_km": g2.d_togocom_km.round(1)}).to_csv(
         PROCESSED / "vide_temoins.csv", index=False)
 
     # ========================================================== controles
@@ -253,6 +318,13 @@ def main() -> None:
     med_sans = float(centile(c.score_risque)[c.sans_temoin].median())
     controles.append(("Cantons sans agent : score median au-dela du 75e centile",
                       med_sans >= 75, f"centile median {med_sans:.0f}"))
+    controles.append(("Distances tous operateurs = acces_canton.csv",
+                      ecart_dist < 0.001, f"ecart max {ecart_dist:.2e} km"))
+    controles.append(("Mediane prefectorale recalculee = valeur publiee",
+                      ecart_pref < 0.001, f"ecart max {ecart_pref:.2e} km"))
+    n_op_pref = len(pd.read_csv(PROCESSED / "acces_operateur_prefecture.csv"))
+    controles.append(("Distances par operateur : 39 prefectures x 2",
+                      n_op_pref == 78, f"{n_op_pref} lignes"))
     controles.append(("Contours cantonaux : 373 entites non vides",
                       len(gj["features"]) == 373 and
                       all(f["geometry"] for f in gj["features"]),

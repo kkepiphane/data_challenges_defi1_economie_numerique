@@ -57,6 +57,7 @@ data/processed/*
 !data/processed/zones_blanches_variantes.csv
 !data/processed/cantons.geojson
 !data/processed/vide_temoins.csv
+!data/processed/acces_operateur_prefecture.csv
 
 # Reports générés
 *.pdf

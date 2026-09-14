@@ -2,7 +2,7 @@
 
 Genere par `src/build_livrable.py`.
 
-Archive : `reports/tableau_de_bord_togo.zip` — 0.6 Mo, 44 fichiers.
+Archive : `reports/tableau_de_bord_togo.zip` — 0.6 Mo, 45 fichiers.
 
 L'archive est EXTRAITE hors du projet puis EXECUTEE : les sept
 pages tournent depuis son seul contenu avant qu'elle soit
@@ -11,9 +11,9 @@ declaree valide.
 | Controle | Resultat | Detail |
 |---|---|---|
 | Archive lisible et sans entrée corrompue | OK | intégrité vérifiée |
-| Les 14 fichiers de données sont présents | OK | 14 fichiers |
+| Les 15 fichiers de données sont présents | OK | 15 fichiers |
 | Notice et dépendances embarquées | OK | README.md + requirements.txt |
-| Aucun cache Python dans l'archive | OK | 44 entrées |
+| Aucun cache Python dans l'archive | OK | 45 entrées |
 | Archive sous 10 Mo | OK | 0.6 Mo |
 | Page « Vue d'ensemble » | OK | 26 blocs, 0 tables |
 | Page « Infrastructures » | OK | 30 blocs, 1 tables |

@@ -71,6 +71,7 @@ def _retirer_filtre() -> None:
     # instancie peut etre reecrit.
     st.session_state["filtre_regions"] = []
     st.session_state["filtre_prefs"] = []
+    st.session_state["filtre_operateur"] = "Tous"
 
 
 def main() -> None:
@@ -139,22 +140,37 @@ def main() -> None:
                                         label_visibility="collapsed",
                                         placeholder="Toutes les préfectures")
 
+        st.session_state.setdefault("filtre_operateur", "Tous")
+        operateur = filtres.radio(
+            "Opérateur", D.OPERATEURS, key="filtre_operateur", horizontal=True,
+            help="Restreint agences et agents Mobile Money à un opérateur. Un "
+                 "point servi par Moov et Togocom compte pour chacun. Sans "
+                 "effet sur l'indice de priorité, calculé tous opérateurs "
+                 "confondus.")
+
         ctx = {
             "regions": sel_regions,
             "prefectures": sel_prefs if sel_prefs else prefs_dispo,
             "filtre_actif": bool(sel_prefs) or len(sel_regions) < len(regions),
+            "operateur": operateur,
         }
         # Le filtre suit l'utilisateur de page en page : il doit donc rester
         # VISIBLE, et se lever d'un geste.
-        if ctx["filtre_actif"]:
-            n = len(ctx["prefectures"])
-            pop = int(pref[pref.prefecture.isin(ctx["prefectures"])]
-                      .population.sum())
-            filtres.caption(
-                f"Filtre actif sur toutes les pages : **{n} préfecture"
-                f"{'s' if n > 1 else ''}**, {pop:,} habitants "
-                f"({pop / D.POPULATION_NATIONALE:.0%})".replace(",", " "))
-            filtres.button("Retirer le filtre", icon=":material/filter_alt_off:",
+        if ctx["filtre_actif"] or operateur != "Tous":
+            morceaux = []
+            if ctx["filtre_actif"]:
+                n = len(ctx["prefectures"])
+                pop = int(pref[pref.prefecture.isin(ctx["prefectures"])]
+                          .population.sum())
+                morceaux.append(
+                    f"**{n} préfecture{'s' if n > 1 else ''}**, {pop:,} "
+                    f"habitants ({pop / D.POPULATION_NATIONALE:.0%})"
+                    .replace(",", " "))
+            if operateur != "Tous":
+                morceaux.append(f"opérateur **{operateur}**")
+            filtres.caption("Filtre actif sur toutes les pages : "
+                            + " · ".join(morceaux))
+            filtres.button("Retirer les filtres", icon=":material/filter_alt_off:",
                            width="stretch", on_click=_retirer_filtre)
         else:
             filtres.caption("Astuce : cliquez une préfecture sur une carte ou "
@@ -163,6 +179,14 @@ def main() -> None:
     # Les cles des blocs sont un numero d'ordre : il doit repartir de zero a
     # chaque rendu, sinon Streamlit remonterait tout l'arbre a chaque clic.
     T.reinitialiser_blocs()
+    if ctx["operateur"] != "Tous" and st.session_state.page in D.PAGES_SANS_OPERATEUR:
+        st.warning(
+            f"**Filtre opérateur « {ctx['operateur']} » sans effet sur cette "
+            "page.** L'indice de priorité et sa robustesse sont calculés tous "
+            "opérateurs confondus : l'usager peut se tourner vers l'un ou "
+            "l'autre réseau. Le filtre s'applique aux pages Vue d'ensemble, "
+            "Infrastructures, Desserte et Couverture.",
+            icon=":material/info:")
     PAGES[st.session_state.page](ctx)
 
     st.markdown(T.pied(

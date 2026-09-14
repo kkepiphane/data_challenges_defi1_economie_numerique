@@ -193,7 +193,7 @@ def _densite(pref, vue, ctx: dict) -> None:
 
 
 def afficher(ctx: dict) -> None:
-    pref = D.prefectures()
+    pref = D.prefectures_operateur(ctx["operateur"])
     vue = pref[pref.prefecture.isin(ctx["prefectures"])].copy()
 
     st.markdown(T.bandeau(
@@ -231,7 +231,9 @@ def afficher(ctx: dict) -> None:
                   unsafe_allow_html=True)
     k[3].markdown(T.kpi("Écart entre extrêmes",
                         f"×{c.hab_par_point_mm.max() / c.hab_par_point_mm.min():.1f}",
-                        "", "de Tchaoudjo à Kpendjal", T.SERIE_2),
+                        "", f"de {c.loc[c.hab_par_point_mm.idxmin(), 'prefecture']} "
+                        f"à {c.loc[c.hab_par_point_mm.idxmax(), 'prefecture']}",
+                        T.SERIE_2),
                   unsafe_allow_html=True)
 
     # ==================================================== quadrant critique
@@ -324,6 +326,10 @@ def afficher(ctx: dict) -> None:
     couleurs = {"Les deux opérateurs": T.SERIE_1, "Togocom seul": T.SERIE_2,
                 "Moov seul": T.SERIE_3, "Opérateur non renseigné": T.GRIS_FOND}
 
+    if ctx["operateur"] != "Tous":
+        st.caption(f"Cette comparaison met les deux opérateurs face à face : "
+                   f"elle reste affichée en entier malgré le filtre "
+                   f"« {ctx['operateur']} ».")
     g2, d2 = st.columns([1.45, 1], gap="medium")
     with g2:
         with T.bloc("Présence des opérateurs sur les points de service"):

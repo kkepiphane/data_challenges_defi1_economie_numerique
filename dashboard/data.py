@@ -99,6 +99,62 @@ def mobile_money_operateurs() -> pd.DataFrame:
     return pd.read_csv(PROCESSED / "points_mobile_money.csv")
 
 
+# =============================================================================
+# FILTRE OPERATEUR
+# =============================================================================
+OPERATEURS = ["Tous", "Moov", "Togocom"]
+
+# Pages construites sur l'indice DCPI, calcule tous operateurs confondus : le
+# filtre operateur ne peut pas s'y appliquer sans recalculer l'indice et sa
+# sensibilite dans la chaine. Elles le DISENT plutot que de l'ignorer en silence.
+PAGES_SANS_OPERATEUR = {"Territoires prioritaires", "Arbitrage",
+                        "Plan d'action"}
+
+
+@st.cache_data(show_spinner=False)
+def prefectures_operateur(operateur: str) -> pd.DataFrame:
+    """Table prefectorale dont les indicateurs d'offre ne portent que sur
+    `operateur`. Population, superficie et score DCPI sont inchanges.
+
+    Un point servi par les deux operateurs compte pour chacun : c'est la
+    PRESENCE de l'operateur qui est mesuree. Les points a operateur non
+    renseigne n'appartiennent a aucun des deux.
+    """
+    t = prefectures()
+    if operateur == "Tous":
+        return t
+    t = t.copy()
+    s = operateur.lower()
+    et = etablissements()
+    actives = et[(et.type_infrastructure == "Agence operateur") & et.actif
+                 & (et.operateur == operateur)].groupby("prefecture").size()
+    t["points_mm"] = t[f"mm_{s}"]
+    t["agences_actives"] = t.prefecture.map(actives).fillna(0).astype(int)
+    t["hab_par_point_mm"] = t.population / t.points_mm.where(t.points_mm > 0)
+    t["points_mm_pour_10k_hab"] = t.points_mm / t.population * 1e4
+    t["agences_pour_100k_hab"] = t.agences_actives / t.population * 1e5
+    dist = pd.read_csv(PROCESSED / "acces_operateur_prefecture.csv").query(
+        "operateur == @operateur")
+    t = t.drop(columns=["dist_agence_med_canton_km", "dist_agence_max_canton_km"])
+    return t.merge(dist.drop(columns="operateur"), on="prefecture", how="left")
+
+
+@st.cache_data(show_spinner=False)
+def mobile_money_operateur(operateur: str) -> pd.DataFrame:
+    """Points ou `operateur` est present (un point par ligne)."""
+    if operateur == "Tous":
+        return mobile_money()
+    df = mobile_money_operateurs()
+    return (df[df.operateur_unitaire == operateur].drop_duplicates("FID")
+            .drop(columns="operateur_unitaire"))
+
+
+def libelle_operateur(ctx: dict) -> str:
+    """« tous opérateurs » ou « Moov » : pour les titres et les notes."""
+    return ("tous opérateurs" if ctx.get("operateur", "Tous") == "Tous"
+            else ctx["operateur"])
+
+
 @st.cache_data(show_spinner=False)
 def zones_blanches() -> pd.DataFrame:
     """373 cantons : temoins de couverture, score de risque, classe.
@@ -138,6 +194,7 @@ def csv(df: pd.DataFrame, ctx: dict | None = None) -> bytes:
             ctx["prefectures"])
     entete = ("# Défi 1 — Togo · export du tableau de bord\n"
               f"# Périmètre : {perimetre}\n"
+              f"# Opérateur : {libelle_operateur(ctx or {})}\n"
               "# Sources : PRISE 2021-2022, RGPH-5 2022, COD-AB 2021\n")
     return (entete + df.to_csv(index=False)).encode("utf-8-sig")
 
