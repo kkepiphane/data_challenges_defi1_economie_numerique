@@ -107,7 +107,7 @@ def _rect(slide, x, y, w, h, remplissage=None, bordure=None, epaisseur=1.0):
 
 
 def _diapo(prs, eyebrow: str, titre: str, message: str, numero: int,
-           total: int = 9):
+           total: int = 10):
     """Ossature commune : filet tricolore, sur-titre, titre, message, pied."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     _rect(slide, 0, 0, L, H, PLAN)
@@ -135,7 +135,9 @@ def _diapo(prs, eyebrow: str, titre: str, message: str, numero: int,
           "PRISE 2021-2022, RGPH-5 2022, COD-AB 2021",
           8, False, ENCRE_MUET, police="Consolas")
     _zone(slide, L - MARGE - Inches(1.2), H - Inches(0.42), Inches(1.2),
-          Inches(0.26), f"{numero:02d} / {total}", 8, True, ENCRE_MUET,
+          # +1 : la page de garde est la page 1. Le numero affiche est
+          # celui qu'on cite en reunion (« slide 5 »), pas un rang de contenu.
+          Inches(0.26), f"{numero + 1:02d} / {total}", 8, True, ENCRE_MUET,
           aligne=PP_ALIGN.RIGHT, police="Consolas")
     return slide
 
@@ -227,6 +229,32 @@ def _tableau(slide, x, y, w, entetes, lignes, largeurs=None, taille=9.5):
     return tbl
 
 
+def _controles() -> tuple[int, int]:
+    """(au vert, total) — meme lecture des memes rapports que
+    `dashboard/data.py::controles_chaine`, pour que le support et le tableau
+    de bord citent toujours le meme nombre."""
+    etapes = ["extraction_rgph5", "socle_geo", "indicateurs", "acces_spatial",
+              "dcpi", "zones_blanches"]
+    ok = total = 0
+    for nom in etapes:
+        chemin = ROOT / "reports" / f"{nom}.md"
+        if not chemin.exists():
+            continue
+        dans = False
+        for ligne in chemin.read_text(encoding="utf-8").split("\n"):
+            if ligne.startswith("| Controle |"):
+                dans = True
+                continue
+            if dans:
+                if not ligne.startswith("|"):
+                    break
+                cells = [c.strip() for c in ligne.strip("|").split("|")]
+                if len(cells) >= 3 and not set(cells[0]) <= {"-", " "}:
+                    total += 1
+                    ok += "OK" in cells[1]
+    return ok, total
+
+
 def _esp(n: float, dec: int = 0) -> str:
     return f"{n:,.{dec}f}".replace(",", " ")
 
@@ -274,12 +302,19 @@ def main() -> None:
     tgc_seul = int((mm.operateur == "Togocom").sum())
     moov_seul = int((mm.operateur == "Moov").sum())
 
+    # Meme definition que `dashboard/data.py::agences_reperes` :
+    #   RECENSEES = agences uniques apres dedoublonnage ;
+    #   ACTIVES   = recensees moins les fermees declarees par la source.
     etab = pd.read_csv(PROCESSED / "etablissements.csv")
     agences = etab[etab.type_infrastructure != "Data center"]
     n_agences = len(agences)
+    n_actives = int(agences.actif.sum())
+    n_fermees = n_agences - n_actives
     n_agences_moov = int((agences.operateur == "Moov").sum())
     n_agences_tgc = int((agences.operateur == "Togocom").sum())
+    n_actives_tgc = int((agences.actif & (agences.operateur == "Togocom")).sum())
     n_dc = int((etab.type_infrastructure == "Data center").sum())
+    n_ctrl_ok, n_ctrl = _controles()
     # Meme regression que la page Desserte du tableau de bord.
     ld = _np.log10(pref.densite_hab_km2)
     lp = _np.log10(pref.points_mm_pour_10k_hab)
@@ -314,14 +349,14 @@ def main() -> None:
              "moyenne nationale · 19 788 points géolocalisés"),
             ("Écart entre préfectures", f"1 à {_fr(rapport)}",
              f"{pire.prefecture} contre {mieux.prefecture}"),
-            ("Préfectures sans aucune agence", f"{len(sans_agence)} / 39",
+            ("Préfectures sans agence active", f"{len(sans_agence)} / 39",
              f"{_esp(int(sans_agence.population.sum()))} habitants concernés"),
         ],
         auteur="KOUTSAVA Kossi Epiphane",
         qualite="Analyse de données · Défi Économie numérique",
         sources=("Géoportail national (PRISE 2021-2022) · RGPH-5, INSEED "
                  "(novembre 2022) · limites COD-AB v02, OCHA (2021) — "
-                 "25 contrôles arithmétiques publiés"))
+                 f"{n_ctrl} contrôles arithmétiques publiés"))
 
     # ---------------------------------------------------------------- 01
     s = _diapo(prs, "Défi Économie numérique · Togo",
@@ -351,7 +386,7 @@ def main() -> None:
              VERT),
             ("Points de service recensés", _esp(int(pref.points_mm.sum())),
              "tous géolocalisés", SERIE_1),
-            ("Préfectures sans aucune agence", f"{len(sans_agence)} / 39",
+            ("Préfectures sans agence active", f"{len(sans_agence)} / 39",
              f"{_esp(int(sans_agence.population.sum()))} habitants", CRITIQUE),
             ("Territoires prioritaires identifiés", f"{len(stables)}",
              "priorité stable sur 2 000 pondérations", SERIE_3)]):
@@ -360,9 +395,8 @@ def main() -> None:
 
     # ---------------------------------------------------------------- 02
     s = _diapo(prs, "Données", "Données, sources et qualité",
-               "Trois sources publiques, trois producteurs — et deux constats "
-               "qui corrigent l'énoncé du défi : 2 opérateurs et non 4, "
-               "90 agences et non 141.", 2)
+               "Trois sources publiques, deux corrections de l'énoncé : "
+               f"2 opérateurs et non 4, {n_agences} agences recensées et non 141.", 2)
     _tableau(s, MARGE, Inches(2.05), L - 2 * MARGE,
              ["Donnée", "Producteur", "Période", "Ce qu'elle apporte"],
              [["Agences, agents Mobile Money, data centers",
@@ -393,9 +427,10 @@ def main() -> None:
         ("« Agences – Télécom » n'est pas un quatrième opérateur",
          "Ses 51 lignes sont déjà contenues dans les fichiers Moov et "
          "Togocom réunis, sans un seul enregistrement propre. "
-         "Empiler les quatre fichiers afficherait "
-         "141 agences au lieu de 90 — 57 % de surestimation dès le premier "
-         "indicateur."),
+         "Empiler les fichiers afficherait 141 agences au lieu de "
+         f"{n_agences} recensées après dédoublonnage ({n_agences_moov} Moov, "
+         f"{n_agences_tgc} Togocom), dont {n_actives} actives : {n_fermees} "
+         "agences Togocom déclarées fermées sont exclues des calculs."),
         ("« Agences – CANAL+ » est vide à la source",
          "Le serveur joint lui-même la mention « the query result is empty » : "
          "c'est une donnée non disponible, et non une absence d'agences sur le "
@@ -410,7 +445,7 @@ def main() -> None:
           BORDURE, 0.75)
     _rect(s, Inches(7.2), Inches(4.45), Inches(0.035), Inches(2.15), VERT)
     _zone(s, Inches(7.45), Inches(4.63), Inches(5.0), Inches(0.3),
-          "25 CONTRÔLES ARITHMÉTIQUES, REJOUÉS À CHAQUE EXÉCUTION", 8, True,
+          f"{n_ctrl} CONTRÔLES ARITHMÉTIQUES, REJOUÉS À CHAQUE EXÉCUTION", 8, True,
           ENCRE_MUET, police="Consolas", interligne=1.3)
     _zone(s, Inches(7.45), Inches(5.0), Inches(5.0), Inches(1.45),
           "La population extraite du PDF de l'INSEED somme exactement à "
@@ -446,8 +481,8 @@ def main() -> None:
     _tableau(s, Inches(7.2), Inches(2.45), Inches(5.5),
              ["Composante", "Mesure", "Poids"],
              [["Déficit Mobile Money", "habitants par point", "30 %"],
-              ["Déficit d'agences", "agences / 100 000 hab.", "25 %"],
-              ["Éloignement", "distance médiane à une agence", "25 %"],
+              ["Déficit d'agences", "agences actives / 100 000 hab.", "25 %"],
+              ["Éloignement", "distance à l'agence active", "25 %"],
               ["Enjeu démographique", "population concernée", "20 %"]],
              largeurs=[0.34, 0.44, 0.22], taille=9)
     _zone(s, Inches(7.2), Inches(4.35), Inches(5.5), Inches(1.3),
@@ -466,9 +501,8 @@ def main() -> None:
 
     # ---------------------------------------------------------------- 05
     s = _diapo(prs, "Diagnostic", "Diagnostic national",
-               f"{_esp(national)} habitants par point de service en moyenne — mais un "
-               f"rapport de 1 à {_fr(rapport)} entre la préfecture la mieux et "
-               f"la moins bien desservie.", 4)
+               f"{_esp(national)} habitants par point de service en moyenne, mais "
+               f"un rapport de 1 à {_fr(rapport)} entre préfectures.", 4)
     _image(s, "ecart_desserte", Inches(4.35), Inches(2.05), hauteur=Inches(4.7))
     for i, (lib, val, note, coul) in enumerate([
             ("Moyenne nationale", _esp(national),
@@ -478,7 +512,7 @@ def main() -> None:
              CRITIQUE),
             ("Préfectures au-dessus de la moyenne", f"{au_dessus} / 39",
              "moins bien desservies que le pays", SERIE_1),
-            ("Communes sans aucune agence", f"{len(com_sans)} / {len(com)}",
+            ("Communes sans agence active", f"{len(com_sans)} / {len(com)}",
              f"{_esp(int(com_sans.population.sum()))} habitants", SERIE_2)]):
         _kpi(s, MARGE, Inches(2.15) + Inches(1.22) * i, Inches(3.5),
              lib, val, note, coul, h=Inches(1.06))
@@ -514,7 +548,7 @@ def main() -> None:
               for _, r in pref.nsmallest(6, "rang_DCPI")
               .sort_values("rang_DCPI").iterrows()]
     _tableau(s, Inches(8.6), Inches(2.05), Inches(4.15),
-             ["#", "Préfecture", "Hab.", "Hab./pt", "Ag.", "Dist."],
+             ["#", "Préfecture", "Hab.", "Hab./pt", "Ag. act.", "Dist."],
              lignes, largeurs=[0.08, 0.30, 0.19, 0.17, 0.10, 0.16], taille=8.5)
     _zone(s, Inches(8.6), Inches(4.55), Inches(4.15), Inches(2.1),
           "Corrélation de Spearman moyenne avec le classement de référence : "
@@ -537,7 +571,7 @@ def main() -> None:
          "Déclencheur : aucune agence active. Seul levier créant un guichet "
          "là où il n'en existe aucun."),
         ("Répartir le maillage plutôt qu'un point unique",
-         "Déclencheur : 25 km ou plus jusqu'à une agence. Quand "
+         "Déclencheur : 25 km ou plus jusqu'à une agence active. Quand "
          "l'éloignement domine, un guichet au chef-lieu ne règle rien."),
         ("Ouvrir la concurrence entre opérateurs",
          f"Déclencheur : un seul opérateur présent. {_esp(tgc_seul)} points ne "
@@ -564,8 +598,9 @@ def main() -> None:
          f"une zone sans réseau mobile. Les {n_zb_eleve} cantons signalés par "
          "le proxy sont à vérifier, pas des zones blanches avérées."),
         ("Les agences CANAL+ sont absentes",
-         "Fichier source vide. Le déficit d'agences ne porte que sur Moov et "
-         "Togocom."),
+         f"Fichier source vide. Le déficit porte sur les {n_actives} agences "
+         f"actives Moov et Togocom ({n_fermees} fermées exclues sur "
+         f"{n_agences} recensées)."),
         ("Le diagnostic décrit 2021-2022",
          "Tout déploiement postérieur est invisible. La hiérarchie des "
          "besoins reste valable tant que les écarts ne sont pas comblés."),
@@ -594,9 +629,10 @@ def main() -> None:
                "en open data, devient une limite critique.", 9)
     lignes_bilan = [
         ("1 · Cartographier agences et centres de données",
-         f"{n_agences} agences d'opérateur ({n_agences_moov} Moov, "
-         f"{n_agences_tgc} Togocom) et {n_dc} centres de données, tous à Lomé. "
-         "« Télécom » est un doublon intégral ; CANAL+ est vide à la source.",
+         f"{n_agences} agences recensées après dédoublonnage "
+         f"({n_agences_moov} Moov, {n_agences_tgc} Togocom), dont {n_actives} "
+         f"actives, et {n_dc} centres de données, tous à Lomé. « Télécom » est "
+         "un doublon ; CANAL+ est vide à la source.",
          "Traité", SERIE_3),
         ("2 · Mobile Money au regard de la population",
          f"{_esp(national)} habitants par point en moyenne, de 1 à "

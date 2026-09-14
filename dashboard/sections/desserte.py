@@ -73,26 +73,6 @@ def _densite(pref, vue, ctx: dict) -> None:
     st.markdown("")
     st.markdown(T.etiquette("Pourquoi ces écarts ? · ce que la densité "
                             "n'explique pas", "1.2rem"), unsafe_allow_html=True)
-    k = st.columns(4, gap="small")
-    k[0].markdown(T.kpi("Part des écarts expliquée par la densité",
-                        f"{r2:.0%}", "",
-                        f"R² log-log · corrélation des rangs {rho:.2f}"
-                        .replace(".", ","), T.SERIE_1), unsafe_allow_html=True)
-    k[1].markdown(T.kpi("Sous-équipés à densité comparable", f"{len(sous)}",
-                        f"/ {len(m)}",
-                        f"au moins {-SEUIL_ECART:.0%} sous l'équipement attendu",
-                        T.STATUT["critique"]), unsafe_allow_html=True)
-    k[2].markdown(T.kpi("Points manquants au regard de la densité",
-                        f"{int(sous.manque_densite.sum()):,}".replace(",", " "),
-                        "", f"{int(sous.population.sum()):,} habitants concernés"
-                        .replace(",", " "), T.SERIE_2), unsafe_allow_html=True)
-    k[3].markdown(T.kpi("Écart entre territoires ruraux",
-                        f"×{fort.points_mm_pour_10k_hab / faible.points_mm_pour_10k_hab:.0f}",
-                        "", f"{fort.prefecture} face à {faible.prefecture}, "
-                        "moins de 150 hab./km²", T.SERIE_3),
-                  unsafe_allow_html=True)
-
-    st.markdown("")
     g, d = st.columns([1.45, 1], gap="medium")
     with g:
         with T.bloc("Équipement observé et équipement attendu selon la densité "
@@ -155,6 +135,38 @@ def _densite(pref, vue, ctx: dict) -> None:
             "<b>corrigeable par le déploiement d'agents</b>, sans attendre que "
             "le territoire se densifie."),
             unsafe_allow_html=True)
+        pluriel = len(sous) > 1
+        manque = f"{int(sous.manque_densite.sum()):,}".replace(",", " ")
+        st.markdown(T.conclusion(
+            f"{len(sous)} préfecture{'s' if pluriel else ''} du périmètre "
+            f"{'ont' if pluriel else 'a'} au moins {-SEUIL_ECART * 100:.0f} % "
+            f"de points de moins que {'leur' if pluriel else 'sa'} densité ne "
+            f"le laisse prévoir, soit {manque} points manquants."
+            if len(sous) else
+            "Aucune préfecture du périmètre n'est nettement sous-équipée au "
+            "regard de sa densité."), unsafe_allow_html=True)
+
+    # Le detail vient APRES le graphique, replie : il sert a verifier, pas a
+    # comprendre.
+    with st.expander("Détail : territoires sous-équipés au regard de leur densité"):
+        k = st.columns(4, gap="small")
+        k[0].markdown(T.kpi("Part des écarts expliquée par la densité",
+                            f"{r2:.0%}", "",
+                            f"R² log-log · corrélation des rangs {rho:.2f}"
+                            .replace(".", ","), T.SERIE_1), unsafe_allow_html=True)
+        k[1].markdown(T.kpi("Sous-équipés à densité comparable", f"{len(sous)}",
+                            f"/ {len(m)}",
+                            f"au moins {-SEUIL_ECART:.0%} sous l'équipement attendu",
+                            T.STATUT["critique"]), unsafe_allow_html=True)
+        k[2].markdown(T.kpi("Points manquants au regard de la densité",
+                            f"{int(sous.manque_densite.sum()):,}".replace(",", " "),
+                            "", f"{int(sous.population.sum()):,} habitants concernés"
+                            .replace(",", " "), T.SERIE_2), unsafe_allow_html=True)
+        k[3].markdown(T.kpi("Écart entre territoires ruraux",
+                            f"×{fort.points_mm_pour_10k_hab / faible.points_mm_pour_10k_hab:.0f}",
+                            "", f"{fort.prefecture} face à {faible.prefecture}, "
+                            "moins de 150 hab./km²", T.SERIE_3),
+                      unsafe_allow_html=True)
         st.markdown("")
         with T.bloc("Les plus sous-équipés au regard de leur densité"):
             if sous.empty:
@@ -174,22 +186,23 @@ def _densite(pref, vue, ctx: dict) -> None:
                 st.download_button("Télécharger (CSV)", D.csv(t, ctx),
                                    "sous_equipes_densite.csv", "text/csv",
                                    icon=":material/download:", key="dl_densite")
-        grand = m.loc[m.manque_densite.idxmax()] if len(m) else None
-        # Le constat « le premier besoin n'est pas rural » n'est vrai que si le
-        # territoire en tete est effectivement urbain : un filtre sur une
-        # region rurale le rendrait faux.
-        if (grand is not None and grand.manque_densite > 0
-                and grand.densite_hab_km2 >= 500):
-            dens = f"{grand.densite_hab_km2:,.0f}".replace(",", " ")
-            vol = f"{int(grand.manque_densite):,}".replace(",", " ")
-            st.markdown(T.lecture(
-                f"En volume, le premier besoin n'est pas rural : "
-                f"<b>{grand.prefecture}</b> ({dens} hab./km²) manque de "
-                f"<b>{vol} points</b> au regard de sa densité, et n'est "
-                f"pourtant que <b>{int(grand.rang_DCPI)}ᵉ sur 39</b> dans "
-                "l'indice de priorité, qui raisonne en habitants par point et "
-                "non en volume. Ce besoin périurbain appelle un traitement "
-                "distinct des priorités rurales."), unsafe_allow_html=True)
+            grand = m.loc[m.manque_densite.idxmax()] if len(m) else None
+            # Le constat « le premier besoin n'est pas rural » n'est vrai que si
+            # le territoire en tete est effectivement urbain : un filtre sur une
+            # region rurale le rendrait faux.
+            if (grand is not None and grand.manque_densite > 0
+                    and grand.densite_hab_km2 >= 500):
+                dens = f"{grand.densite_hab_km2:,.0f}".replace(",", " ")
+                vol = f"{int(grand.manque_densite):,}".replace(",", " ")
+                st.markdown(T.lecture(
+                    f"En volume, le premier besoin n'est pas rural : "
+                    f"<b>{grand.prefecture}</b> ({dens} hab./km²) manque de "
+                    f"<b>{vol} points</b> au regard de sa densité, et n'est "
+                    f"pourtant que <b>{int(grand.rang_DCPI)}ᵉ sur 39</b> dans "
+                    "l'indice de priorité, qui raisonne en habitants par point "
+                    "et non en volume. Ce besoin périurbain appelle un "
+                    "traitement distinct des priorités rurales."),
+                    unsafe_allow_html=True)
 
 
 def afficher(ctx: dict) -> None:
@@ -214,6 +227,31 @@ def afficher(ctx: dict) -> None:
     c = vue.dropna(subset=["hab_par_point_mm"]).copy()
     c["critique"] = (c.hab_par_point_mm > national) & (c.population > med_pop)
     quadrant = c[c.critique].sort_values("hab_par_point_mm", ascending=False)
+
+    # Concurrence : lue tous operateurs confondus, sur le perimetre filtre.
+    mmo = D.mobile_money_operateurs()
+    mmo = mmo[mmo.prefecture.isin(ctx["prefectures"])]
+    brut = mmo.drop_duplicates("FID")
+    n_tgc = int((brut.operateur == "Togocom").sum())
+    n_moov = int((brut.operateur == "Moov").sum())
+    _, _, _, r2, _ = modele_densite(pref)
+
+    def _n(v: float) -> str:
+        return f"{v:,.0f}".replace(",", " ")
+
+    st.markdown(T.a_retenir([
+        f"La moitié la moins desservie de la population ne dispose que de "
+        f"<b>{moitie:.0%} des points</b> Mobile Money, au lieu de 50 %."
+        .replace("%", " %").replace("  %", " %"),
+        f"<b>{len(quadrant)} préfectures</b> sont à la fois plus peuplées que la "
+        f"médiane et moins desservies que la moyenne : "
+        f"<b>{_n(quadrant.population.sum())} habitants</b>.",
+        f"La densité n'explique que <b>{r2 * 100:.0f} %</b> des écarts : le "
+        "déficit se corrige en déployant des agents, sans attendre que le "
+        "territoire se densifie.",
+        f"<b>{_n(n_tgc)} points ne servent que Togocom</b>, contre "
+        f"{_n(n_moov)} pour Moov seul : là, l'usager n'a aucune alternative.",
+    ]), unsafe_allow_html=True)
 
     # =========================================================== indicateurs
     k = st.columns(4, gap="small")
@@ -273,14 +311,15 @@ def afficher(ctx: dict) -> None:
                 yaxis_title="Habitants par point Mobile Money",
                 margin=dict(l=4, r=4, t=6, b=36))
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-            st.markdown(
-                T.lecture(
-                    f"<b>{len(quadrant)} préfectures</b> sont à la fois plus "
-                    "peuplées que la médiane nationale et moins bien desservies "
-                    "que la moyenne. Ce sont elles qu'un investissement toucherait "
-                    "le plus efficacement. L'axe des abscisses est logarithmique — "
-                    "sans quoi le Golfe et ses 1,3 million d'habitants écraserait "
-                    "les 38 autres."), unsafe_allow_html=True)
+            st.markdown(T.conclusion(
+                f"{len(quadrant)} préfectures (en bleu) cumulent population "
+                "élevée et desserte faible : c'est là qu'un investissement "
+                "touche le plus d'habitants."), unsafe_allow_html=True)
+            st.markdown(T.source(
+                "Axe des abscisses logarithmique — sans quoi le Golfe et ses "
+                "1,3 million d'habitants écraserait les 38 autres. Traits : "
+                "médiane de population et moyenne nationale de desserte."),
+                unsafe_allow_html=True)
 
     with d:
         with T.bloc("Concentration de l'équipement"):
@@ -301,12 +340,14 @@ def afficher(ctx: dict) -> None:
                 xaxis=dict(tickformat=".0%"), yaxis=dict(tickformat=".0%"),
                 margin=dict(l=4, r=4, t=6, b=36))
             st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
-            st.markdown(
-                T.lecture(
-                    "Les préfectures sont classées du plus faible au plus fort "
-                    "taux d'équipement par habitant. L'écart à la diagonale "
-                    "mesure l'inégalité. <b>Transformation de présentation</b> "
-                    "appliquée à des valeurs déjà contrôlées."),
+            st.markdown(T.conclusion(
+                f"La moitié la moins desservie de la population dispose de "
+                f"{moitie * 100:.0f} % des points : l'écart à la diagonale "
+                "mesure cette inégalité."), unsafe_allow_html=True)
+            st.markdown(T.source(
+                "Préfectures classées du plus faible au plus fort taux "
+                "d'équipement par habitant. Transformation de présentation "
+                "appliquée à des valeurs déjà contrôlées."),
                 unsafe_allow_html=True)
 
     # ============================================= ce que la densité explique
@@ -314,10 +355,9 @@ def afficher(ctx: dict) -> None:
 
     # ======================================================== opérateurs
     st.markdown("")
-    mmo = D.mobile_money_operateurs()
-    mmo = mmo[mmo.prefecture.isin(ctx["prefectures"])]
-    brut = mmo.drop_duplicates("FID")
-    libelles = {"Moov, Togocom": "Les deux opérateurs",
+    st.markdown(T.etiquette("Concurrence entre opérateurs", "1.2rem"),
+                unsafe_allow_html=True)
+    libelles ={"Moov, Togocom": "Les deux opérateurs",
                 "Togocom": "Togocom seul", "Moov": "Moov seul",
                 "Nsp": "Opérateur non renseigné"}
     rep = (brut.operateur.value_counts().rename_axis("modalite")
@@ -346,28 +386,22 @@ def afficher(ctx: dict) -> None:
                                margin=dict(l=4, r=140, t=6, b=34))
             st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
 
-    n_tgc = int(rep.loc[rep.libelle == "Togocom seul", "points"].sum())
-    n_moov = int(rep.loc[rep.libelle == "Moov seul", "points"].sum())
     n_nsp = int(rep.loc[rep.libelle == "Opérateur non renseigné",
                         "points"].sum())
     with d2:
-        st.markdown(
-            T.action(
-                f"<b>{n_tgc:,} points ne servent que Togocom</b>, contre "
-                f"<b>{n_moov:,} pour Moov seul</b> — un rapport de "
-                f"{n_tgc / max(n_moov, 1):.1f} à 1. Là où un seul opérateur "
-                "est présent, l'usager n'a aucune alternative en cas de "
-                "panne, de tarif ou de rupture de liquidité. "
-                "<b>Ouvrir la concurrence est un objectif en soi.</b>"
-                .replace(",", " ")), unsafe_allow_html=True)
-        st.markdown("")
-        st.markdown(
-            T.lecture(
-                f"Les <b>{n_nsp:,} points à opérateur non renseigné</b> "
-                "forment une catégorie propre : ils ne sont ni réaffectés, ni "
-                "supprimés. La variable source est multivaluée — un point "
-                "servi par deux opérateurs n'est pas deux points."
-                .replace(",", " ")), unsafe_allow_html=True)
+        st.markdown(T.conclusion(
+            f"{_n(n_tgc)} points ne servent que Togocom, contre {_n(n_moov)} "
+            f"pour Moov seul — un rapport de "
+            f"{n_tgc / max(n_moov, 1):.1f}".replace(".", ",") + " à 1. Ouvrir "
+            "la concurrence est un objectif en soi."), unsafe_allow_html=True)
+        st.markdown(T.lecture(
+            "Là où un seul opérateur est présent, l'usager n'a aucune "
+            "alternative en cas de panne, de tarif ou de rupture de "
+            "liquidité."), unsafe_allow_html=True)
+        st.markdown(T.source(
+            f"{_n(n_nsp)} points à opérateur non renseigné forment une "
+            "catégorie propre, ni réaffectée ni supprimée. Un point servi par "
+            "deux opérateurs n'est pas deux points."), unsafe_allow_html=True)
 
     with st.expander("Voir les données par préfecture"):
         t = vue[["prefecture", "region", "population", "points_mm", "mm_moov",

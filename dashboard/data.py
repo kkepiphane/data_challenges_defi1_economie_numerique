@@ -86,6 +86,45 @@ def etablissements() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
+def agences_reperes() -> dict:
+    """LA definition des comptes d'agences, pour toutes les pages.
+
+    Deux grandeurs, jamais confondues :
+      - RECENSEES : agences uniques apres dedoublonnage des fichiers Moov,
+        Togocom et « Telecom » (doublon integral des deux premiers) ;
+      - ACTIVES   : recensees moins celles que la source declare fermees
+        (`activite_statut` = Ferme). Seules les actives entrent dans les
+        distances, les ratios par habitant et l'indice de priorite.
+    """
+    et = etablissements()
+    ag = et[et.type_infrastructure == "Agence operateur"]
+    fermees = ag[~ag.actif]
+    return {
+        "recensees": len(ag),
+        "actives": int(ag.actif.sum()),
+        "fermees": len(fermees),
+        "fermees_detail": [f"{r.etab_nom} ({r.prefecture})"
+                           for r in fermees.itertuples()],
+        **{f"recensees_{op.lower()}": int((ag.operateur == op).sum())
+           for op in ("Moov", "Togocom")},
+        **{f"actives_{op.lower()}": int((ag.actif & (ag.operateur == op)).sum())
+           for op in ("Moov", "Togocom")},
+    }
+
+
+def libelle_agences(operateur: str = "Tous") -> str:
+    """Phrase de reference, identique partout ou les comptes sont cites."""
+    a = agences_reperes()
+    if operateur == "Tous":
+        return (f"{a['recensees']} agences recensées après dédoublonnage "
+                f"({a['recensees_moov']} Moov, {a['recensees_togocom']} Togocom), "
+                f"dont {a['actives']} actives")
+    s = operateur.lower()
+    return (f"{a[f'recensees_{s}']} agences {operateur} recensées, "
+            f"dont {a[f'actives_{s}']} actives")
+
+
+@st.cache_data(show_spinner=False)
 def mobile_money() -> pd.DataFrame:
     """19 788 points (table courte : un point = une ligne)."""
     df = pd.read_csv(PROCESSED / "points_mobile_money.csv")
@@ -129,6 +168,7 @@ def prefectures_operateur(operateur: str) -> pd.DataFrame:
     actives = et[(et.type_infrastructure == "Agence operateur") & et.actif
                  & (et.operateur == operateur)].groupby("prefecture").size()
     t["points_mm"] = t[f"mm_{s}"]
+    t["agences"] = t[f"agences_{s}"]                 # recensees
     t["agences_actives"] = t.prefecture.map(actives).fillna(0).astype(int)
     t["hab_par_point_mm"] = t.population / t.points_mm.where(t.points_mm > 0)
     t["points_mm_pour_10k_hab"] = t.points_mm / t.population * 1e4
@@ -247,6 +287,34 @@ def ouvrir_fiche(cle: str, noms: list[str], changer_de_page: bool = False):
 def rapport(nom: str) -> str:
     chemin = REPORTS / f"{nom}.md"
     return chemin.read_text(encoding="utf-8") if chemin.exists() else ""
+
+
+def part_points_moitie_moins_desservie(pref: pd.DataFrame) -> float:
+    """Part des points Mobile Money dont dispose la moitie de la population
+    la moins bien desservie (courbe de concentration, prefectures classees
+    du plus faible au plus fort taux d'equipement par habitant)."""
+    import numpy as np
+    b = pref.dropna(subset=["hab_par_point_mm"]).sort_values(
+        "points_mm_pour_10k_hab")
+    cum_pop = np.concatenate([[0], np.cumsum(b.population) / b.population.sum()])
+    cum_mm = np.concatenate([[0], np.cumsum(b.points_mm) / b.points_mm.sum()])
+    return float(np.interp(0.5, cum_pop, cum_mm))
+
+
+def liste_fr(noms: list[str]) -> str:
+    """« A, B et C »."""
+    noms = list(noms)
+    return noms[0] if len(noms) == 1 else ", ".join(noms[:-1]) + " et " + noms[-1]
+
+
+def nombre_controles() -> tuple[int, int]:
+    """(controles au vert, controles au total) — la SEULE source du nombre
+    cite dans le pied de page, la page Methode et le support (qui applique la
+    meme lecture des memes rapports)."""
+    ctrl = controles_chaine()
+    if ctrl.empty:
+        return 0, 0
+    return int(ctrl.Resultat.str.contains("OK").sum()), len(ctrl)
 
 
 def controles_chaine() -> pd.DataFrame:
