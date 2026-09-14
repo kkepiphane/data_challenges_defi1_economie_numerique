@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "reports" / "tableau_de_bord_togo.zip"
 RACINE_ARCHIVE = "tableau_de_bord_togo"
 
-# Les dix fichiers lus par l'application. La liste est EXPLICITE : embarquer
+# Les quatorze fichiers lus par l'application. La liste est EXPLICITE : embarquer
 # `data/processed/*` entrainerait les 5 Mo de la table WKT d'origine, que
 # l'application n'ouvre jamais.
 DONNEES = [
@@ -51,6 +51,8 @@ DONNEES = [
     "dcpi_prefecture.csv", "dcpi_sensibilite.csv", "dcpi_variantes.csv",
     "etablissements_pts.csv", "indicateurs_commune.csv",
     "points_mobile_money.csv", "prefectures.geojson",
+    "zones_blanches_canton.csv", "zones_blanches_variantes.csv",
+    "cantons.geojson", "vide_temoins.csv",
 ]
 
 # Les sept pages, lues telles que l'application les nomme. La liste n'est pas
@@ -80,11 +82,11 @@ suffisent : ni compilation, ni outil système, ni base de données.
 
 | Dossier | Contenu |
 |---|---|
-| `dashboard/` | l'application : 7 pages, cartes, fiches de territoire |
-| `data/processed/` | les 10 fichiers lus par l'application |
+| `dashboard/` | l'application : 8 pages, cartes, fiches de territoire |
+| `data/processed/` | les 14 fichiers lus par l'application |
 | `reports/` | un rapport de contrôle par étape de la chaîne d'analyse |
 
-## Les sept pages
+## Les huit pages
 
 | Page | Ce qu'on y trouve |
 |---|---|
@@ -92,6 +94,7 @@ suffisent : ni compilation, ni outil système, ni base de données.
 | **Infrastructures** | agences, agents Mobile Money, centres de données — après déduplication |
 | **Desserte & population** | ratios par habitant, concentration, écarts entre préfectures |
 | **Territoires prioritaires** | l'indice DCPI, sa composition, sa robustesse, une fiche par territoire |
+| **Couverture & zones blanches** | la donnée de couverture absente, les sources cherchées, un proxy déclaré comme tel et la carte des cantons à investiguer |
 | **Arbitrage** | réglez vous-même les pondérations, puis convertissez un objectif de desserte en nombre de points à ouvrir |
 | **Plan d'action** | quelles interventions les déficits mesurés appellent, et sur quels territoires |
 | **Méthode & limites** | sources, contrôles arithmétiques, pistes écartées, limites à connaître avant de citer les résultats |
@@ -103,8 +106,9 @@ dans aucune source du projet. Un score élevé signale un besoin mesuré — pas
 solution, et pas un budget.
 
 Il ne mesure **pas la couverture réseau mobile** : aucune des 19 variables des
-fichiers sources ne la décrit. Une zone sans agence n'est pas nécessairement
-une zone sans réseau.
+fichiers sources ne la décrit. La page « Couverture & zones blanches » désigne
+des cantons à investiguer à partir d'un proxy déclaré — une zone sans agent
+Mobile Money n'est pas nécessairement une zone sans réseau.
 
 ## Sources
 
@@ -310,7 +314,7 @@ def main() -> None:
         corrompu = z.testzip()
         controles.append(("Archive lisible et sans entrée corrompue",
                           corrompu is None, corrompu or "intégrité vérifiée"))
-        controles.append(("Les 10 fichiers de données sont présents",
+        controles.append((f"Les {len(DONNEES)} fichiers de données sont présents",
                           all(f"{RACINE_ARCHIVE}/data/processed/{n}" in noms
                               for n in DONNEES), f"{len(DONNEES)} fichiers"))
         controles.append(("Notice et dépendances embarquées",

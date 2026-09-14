@@ -1,0 +1,365 @@
+"""
+COUVERTURE RESEAU & ZONES BLANCHES
+==================================
+La page d'une donnee ABSENTE. Elle ne la maquille pas ; elle en tire le parti
+honnete, dans cet ordre :
+
+    1. ce qui manque, et ou on l'a cherche ;
+    2. le proxy retenu, et pourquoi il vaut quelque chose ;
+    3. la carte des cantons a investiguer ;
+    4. ce qu'il faut publier pour remplacer le proxy par une mesure.
+
+Tout est lu dans `data/processed/zones_blanches_canton.csv`, produit et
+controle par `src/zones_blanches.py`.
+"""
+
+from __future__ import annotations
+
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
+import cartes
+import data as D
+import theme as T
+
+CLASSES = {                                     # ordre = ordre de la legende
+    "Élevé": T.STATUT["critique"],
+    "À surveiller": T.STATUT["attention"],
+    "Faible": "#e4ded1",
+}
+
+COMPOSANTES = [
+    ("r1_eloignement", "Éloignement d'une agence", T.SERIE_1),
+    ("r2_rarete_temoins", "Rareté des agents Mobile Money", T.SERIE_2),
+    ("r3_presence_operateur", "Faible présence opérateur", T.SERIE_3),
+    ("r4_faible_densite", "Faible densité de population", T.ENCRE_MUET),
+]
+
+SOURCES = pd.DataFrame([
+    {"Source interrogée": "Les 30 fichiers du défi (6 jeux × 5 formats)",
+     "Ce qu'on y cherchait": "Signal, technologie 2G/3G/4G, antenne",
+     "Résultat": "Aucune variable — vérifié sur les 19 colonnes"},
+    {"Source interrogée": "Géoportail national — couches « Tours télécoms » "
+                          "(toutes, Moov, Togocom)",
+     "Ce qu'on y cherchait": "Position des antennes",
+     "Résultat": "Existent au catalogue, HORS open data"},
+    {"Source interrogée": "Géoportail national — « Réseau téléphonique » "
+                          "(fibre, cuivre, raccordements)",
+     "Ce qu'on y cherchait": "Réseau de collecte",
+     "Résultat": "Existent au catalogue, HORS open data"},
+    {"Source interrogée": "Mesures de débit participatives",
+     "Ce qu'on y cherchait": "Qualité de service observée",
+     "Résultat": "Écartées : l'absence de mesure veut dire « aucun test », "
+                 "biais vers les zones déjà connectées"},
+])
+
+A_PUBLIER = [
+    ("Sites d'antennes par opérateur",
+     "Position, technologie (2G/3G/4G), date de mise en service. Les couches "
+     "existent déjà au catalogue national : il s'agit de les ouvrir, pas de "
+     "les produire."),
+    ("Cartes de couverture déclarées",
+     "Emprise de couverture par technologie et par opérateur, au format "
+     "géographique — la donnée qui permet de dire « zone blanche » sans proxy."),
+    ("Mesures de contrôle du régulateur",
+     "Relevés terrain du taux de réussite d'appel et de connexion data, "
+     "localisés : ils valident ou corrigent les cartes déclarées."),
+]
+
+
+def _carte(zb: pd.DataFrame, geo: dict, pref_vue: pd.DataFrame,
+           mode: str, vide: pd.DataFrame | None) -> go.Figure:
+    fig = go.Figure()
+    if mode == "classe":
+        # Une trace par classe : legende lisible, et couleur NOMINALE — un
+        # niveau de risque est une categorie, pas une intensite continue.
+        for classe, couleur in CLASSES.items():
+            t = zb[zb.classe == classe]
+            if t.empty:
+                continue
+            fig.add_trace(go.Choroplethmap(
+                geojson=geo, locations=t.adm3_pcode,
+                featureidkey="properties.adm3_pcode", z=[1] * len(t),
+                colorscale=[[0, couleur], [1, couleur]], showscale=False,
+                marker=dict(line=dict(color="#ffffff", width=0.6),
+                            opacity=0.9),
+                name=f"{classe} ({len(t)})", showlegend=True,
+                customdata=t[["canton", "prefecture", "n_mm", "n_operateurs",
+                              "dist_agence_km", "score_risque",
+                              "adm3_pcode"]].values,
+                hovertemplate=_survol()))
+    else:
+        fig.add_trace(go.Choroplethmap(
+            geojson=geo, locations=zb.adm3_pcode,
+            featureidkey="properties.adm3_pcode", z=zb.score_risque,
+            colorscale=[[i / (len(T.SEQUENTIEL) - 1), c]
+                        for i, c in enumerate(T.SEQUENTIEL)],
+            zmin=0, zmax=100,
+            marker=dict(line=dict(color="#ffffff", width=0.6), opacity=0.9),
+            colorbar=dict(title=dict(text="Score de risque", side="right",
+                                     font=dict(size=11)),
+                          thickness=11, len=0.6, x=0.985, xanchor="right"),
+            customdata=zb[["canton", "prefecture", "n_mm", "n_operateurs",
+                           "dist_agence_km", "score_risque",
+                           "adm3_pcode"]].values,
+            hovertemplate=_survol()))
+
+    # Limites prefectorales par-dessus : on lit le canton DANS sa prefecture.
+    lon, lat = cartes.contours(D.geojson_prefectures(), "prefecture",
+                               set(pref_vue.prefecture))
+    fig.add_trace(go.Scattermap(lon=lon, lat=lat, mode="lines",
+                                line=dict(color="rgba(18,18,15,0.6)", width=1.4),
+                                hoverinfo="skip", showlegend=False))
+    if vide is not None and len(vide):
+        fig.add_trace(go.Scattermap(
+            lon=vide.lon, lat=vide.lat, mode="markers",
+            marker=dict(size=4, color="#12120f", opacity=0.55),
+            name=f"À plus de 10 km de tout agent", hoverinfo="skip"))
+    fig.update_layout(
+        map=dict(style=cartes.STYLE_FOND, center=cartes.CENTRE, zoom=cartes.ZOOM),
+        height=640, margin=dict(l=0, r=0, t=0, b=0),
+        legend=dict(orientation="v", yanchor="top", y=0.98, x=0.012,
+                    bgcolor="rgba(255,255,255,0.92)", bordercolor=T.BORDURE,
+                    borderwidth=1, font=dict(size=11.5, color=T.ENCRE_2)))
+    return fig
+
+
+def _survol() -> str:
+    return ("<b>%{customdata[0]}</b> — %{customdata[1]}<br><br>"
+            "Agents Mobile Money : %{customdata[2]}<br>"
+            "Opérateurs identifiés : %{customdata[3]} / 2<br>"
+            "Agence la plus proche : %{customdata[4]:.0f} km<br>"
+            "<b>Score de risque : %{customdata[5]:.1f} / 100</b>"
+            "<extra></extra>")
+
+
+def _choisir_canton() -> None:
+    """Rappel du clic sur la carte : memorise le canton designe."""
+    etat = st.session_state.get("carte_zb") or {}
+    for p in (etat.get("selection") or {}).get("points") or []:
+        donnees = p.get("customdata")
+        code = (donnees[-1] if isinstance(donnees, list) and donnees
+                else p.get("location"))
+        if code:
+            st.session_state["canton_zb"] = code
+            return
+
+
+def afficher(ctx: dict) -> None:
+    zb_all = D.zones_blanches()
+    zb = zb_all[zb_all.prefecture.isin(ctx["prefectures"])]
+    pref = D.prefectures()
+    pref_vue = pref[pref.prefecture.isin(ctx["prefectures"])]
+    geo = D.geojson_cantons()
+
+    st.markdown(T.bandeau(
+        "Diagnostic · 05", "Couverture réseau & zones blanches",
+        "La couverture mobile n'est pas mesurable avec les données ouvertes. "
+        "Où faut-il donc aller vérifier en priorité, et quelle donnée publier "
+        "pour ne plus avoir à deviner ?"), unsafe_allow_html=True)
+
+    # ======================================================= 1. LA DONNEE
+    st.markdown(T.etiquette("1 · Ce qui manque"), unsafe_allow_html=True)
+    cartes_statut = [
+        ("Donnée indisponible", T.STATUT["critique"],
+         "<b>Aucune mesure de couverture radio</b> — ni signal, ni "
+         "technologie, ni position d'antenne — dans les sources ouvertes."),
+        ("Sources cherchées", T.STATUT["attention"],
+         "Les 30 fichiers du défi, puis les <b>454 couches</b> du catalogue "
+         "national. Les couches antennes existent, <b>hors open data</b>."),
+        ("Proxy utilisé", T.SERIE_1,
+         "Un agent Mobile Money actif ne fonctionne pas sans réseau : c'est un "
+         "<b>témoin indirect de couverture</b>. Leur absence désigne des zones "
+         "à vérifier."),
+        ("Ce que le proxy ne dit pas", T.ENCRE_MUET,
+         "<b>Absence d'agent ≠ absence de réseau.</b> Le résultat est une "
+         "liste de zones à investiguer, jamais une carte de zones blanches."),
+    ]
+    cols = st.columns(4, gap="small")
+    for col, (titre, coul, corps) in zip(cols, cartes_statut):
+        col.markdown(
+            f'<div class="carte" style="border-top:3px solid {coul};'
+            f'min-height:9.5rem"><div class="carte-t">{titre}</div>'
+            f'<div style="font-size:0.84rem;color:{T.ENCRE_2};line-height:1.55">'
+            f'{corps}</div></div>', unsafe_allow_html=True)
+    with st.expander("Détail des sources interrogées"):
+        st.dataframe(SOURCES, width="stretch", hide_index=True)
+
+    # ===================================================== 2. LES CHIFFRES
+    st.markdown(T.etiquette("2 · Zones à risque de zone blanche", "1.4rem"),
+                unsafe_allow_html=True)
+    eleve = zb[zb.classe == "Élevé"]
+    sans = zb[zb.sans_temoin]
+    surface_vide = (zb.part_vide_10km * zb.area_sqkm).sum() / max(zb.area_sqkm.sum(), 1)
+    variantes = D.zones_blanches_variantes()
+    k = st.columns(4, gap="small")
+    k[0].markdown(T.kpi("Cantons à risque élevé", f"{len(eleve)}",
+                        f"/ {len(zb)}",
+                        "top 10 % du score national, ou aucun agent",
+                        T.STATUT["critique"]), unsafe_allow_html=True)
+    k[1].markdown(T.kpi("Cantons sans aucun agent Mobile Money",
+                        f"{len(sans)}", "",
+                        f"{sans.area_sqkm.sum():,.0f} km² sans témoin de couverture"
+                        .replace(",", " "), T.STATUT["critique"]),
+                  unsafe_allow_html=True)
+    k[2].markdown(T.kpi("Surface à plus de 10 km de tout agent",
+                        f"{surface_vide * 100:.1f}".replace(".", ","), "%",
+                        "grille de 1 km, distance au témoin le plus proche",
+                        T.STATUT["attention"]), unsafe_allow_html=True)
+    k[3].markdown(T.kpi("Stabilité du classement",
+                        f"{variantes.spearman.min():.2f}".replace(".", ","), "",
+                        "corrélation minimale, retrait de chaque composante",
+                        T.STATUT["bon"]), unsafe_allow_html=True)
+
+    st.markdown("")
+    g, d = st.columns([2.2, 1], gap="medium")
+    with d:
+        with T.bloc("Ce que la carte affiche"):
+            mode = st.radio("Lecture", ["Niveau de risque", "Score continu"],
+                            horizontal=True, label_visibility="collapsed")
+            montrer_vide = st.toggle("Mailles à plus de 10 km d'un agent",
+                                     value=True)
+        st.markdown(T.lecture(
+            "<b>Quatre composantes à poids égaux</b>, chacune en rang centile "
+            "sur les 373 cantons : distance à l'agence la plus proche, agents "
+            "Mobile Money au km², nombre d'opérateurs identifiés parmi ces "
+            "agents, densité de population de la préfecture."),
+            unsafe_allow_html=True)
+        par_pref = (eleve.groupby("prefecture").size()
+                    .sort_values(ascending=False))
+        if len(par_pref):
+            tete = par_pref.index[0]
+            n_tete = int(par_pref.iloc[0])
+            total_tete = int((zb.prefecture == tete).sum())
+            robustes = set(pd.read_csv(D.PROCESSED / "dcpi_sensibilite.csv")
+                           .query("frequence_top10 >= 0.9").prefecture)
+            communs = [p for p in par_pref.index[:5] if p in robustes]
+            st.markdown(T.action(
+                f"<b>{tete} concentre {n_tete} des {len(eleve)} cantons à "
+                f"risque élevé</b> ({n_tete} sur {total_tete} de ses cantons). "
+                + (f"{', '.join(communs)} "
+                   f"{'figure' if len(communs) == 1 else 'figurent'} aussi "
+                   "parmi les priorités robustes de l'indice DCPI : deux "
+                   "lectures indépendantes désignent les mêmes territoires."
+                   if communs else "")), unsafe_allow_html=True)
+
+    with g:
+        with T.bloc("Zones à risque de zone blanche · par canton · cliquez un "
+                    "canton pour son détail"):
+            vide = None
+            if montrer_vide:
+                vide = D.vide_temoins()
+                # Filtre spatial grossier sur l'emprise des prefectures vues :
+                # suffisant pour l'affichage, sans bibliotheque geometrique.
+                if ctx["filtre_actif"]:
+                    lon, lat = cartes.contours(D.geojson_prefectures(),
+                                               "prefecture", set(pref_vue.prefecture))
+                    lon = [v for v in lon if v is not None]
+                    lat = [v for v in lat if v is not None]
+                    vide = vide[vide.lon.between(min(lon), max(lon))
+                                & vide.lat.between(min(lat), max(lat))]
+            st.plotly_chart(
+                _carte(zb, geo, pref_vue,
+                       "classe" if mode == "Niveau de risque" else "score", vide),
+                width="stretch", key="carte_zb", on_select=_choisir_canton,
+                selection_mode="points", config={"displayModeBar": False})
+            st.markdown(T.source(
+                "Contours COD-AB (373 cantons) · agents Mobile Money PRISE "
+                "2021-2022 · trait sombre : limites préfectorales. Proxy "
+                "d'investigation, pas mesure de couverture."),
+                unsafe_allow_html=True)
+
+    # ================================================ 3. LE DETAIL
+    st.markdown(T.etiquette("3 · Zones suspectes à investiguer", "1.4rem"),
+                unsafe_allow_html=True)
+    g2, d2 = st.columns([1.6, 1], gap="medium")
+    with g2:
+        with T.bloc(f"Cantons à risque élevé · {len(eleve)} dans le périmètre"):
+            t = eleve.sort_values("rang_risque")[
+                ["rang_risque", "canton", "prefecture", "n_mm", "n_operateurs",
+                 "dist_agence_km", "part_vide_10km", "frequence_top",
+                 "score_risque"]].copy()
+            t.columns = ["Rang", "Canton", "Préfecture", "Agents MM",
+                         "Opérateurs", "Agence (km)", "Surface > 10 km",
+                         "Stabilité", "Score"]
+            st.dataframe(t.style.format({
+                "Agence (km)": "{:.0f}", "Surface > 10 km": "{:.0%}",
+                "Stabilité": "{:.0%}", "Score": "{:.1f}"},
+                thousands=" ", decimal=","),
+                width="stretch", hide_index=True, height=400)
+            st.download_button("Télécharger les zones à investiguer (CSV)",
+                               D.csv(eleve.drop(columns=[c for c, *_ in COMPOSANTES]),
+                                     ctx),
+                               "zones_a_investiguer.csv", "text/csv",
+                               icon=":material/download:", key="dl_zb")
+            st.markdown(T.source(
+                "« Stabilité » : part des 2 000 pondérations aléatoires pour "
+                "lesquelles le canton reste dans le top 10 % national."),
+                unsafe_allow_html=True)
+
+    with d2:
+        options = zb.sort_values("rang_risque")
+        libelles = dict(zip(options.adm3_pcode,
+                            options.canton + " — " + options.prefecture))
+        if st.session_state.get("canton_zb") not in libelles:
+            st.session_state["canton_zb"] = options.adm3_pcode.iloc[0]
+        code = st.selectbox("Canton", list(libelles), key="canton_zb",
+                            format_func=libelles.get,
+                            label_visibility="collapsed")
+        r = zb[zb.adm3_pcode == code].iloc[0]
+        with T.bloc(f"{r.canton} · rang {int(r.rang_risque)} sur 373"):
+            fig = go.Figure()
+            for col, lib, coul in COMPOSANTES:
+                fig.add_trace(go.Bar(
+                    x=[r[col] / 4], y=["Score"], orientation="h", name=lib,
+                    marker=dict(color=coul, line=dict(width=2, color=T.SURFACE)),
+                    text=[f"{r[col] / 4:.0f}"], textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(size=11, color=T.SURFACE),
+                    hovertemplate=f"<b>{lib}</b><br>centile {r[col]:.0f}"
+                                  "<extra></extra>"))
+            fig.update_layout(barmode="stack", height=150,
+                              xaxis=dict(range=[0, 100]),
+                              margin=dict(l=4, r=4, t=4, b=4),
+                              legend=dict(orientation="h", y=-0.5,
+                                          font=dict(size=10)))
+            st.plotly_chart(fig, width="stretch",
+                            config={"displayModeBar": False})
+            def _n(v: float) -> str:
+                return f"{v:,.0f}".replace(",", " ")
+            st.markdown(T.lecture(
+                f"<b>{int(r.n_mm)}</b> agent{'s' if r.n_mm > 1 else ''} Mobile "
+                f"Money sur {_n(r.area_sqkm)} km², "
+                f"<b>{int(r.n_operateurs)}</b> opérateur(s) identifié(s). "
+                f"Agence la plus proche à <b>{r.dist_agence_km:.0f} km</b>. "
+                f"{r.part_vide_10km * 100:.0f} % de la surface est à plus de "
+                f"10 km de tout agent. Préfecture : "
+                f"{_n(r.densite_prefecture)} hab./km²."),
+                unsafe_allow_html=True)
+
+    # ============================================= 4. RECOMMANDATION
+    st.markdown(T.etiquette("4 · Ce qu'il faut publier pour remplacer ce proxy",
+                            "1.4rem"), unsafe_allow_html=True)
+    st.markdown(T.action(
+        "<b>Recommandation prioritaire au producteur de données et au "
+        "régulateur : ouvrir les couches d'antennes et de couverture.</b> "
+        f"Elles transformeraient ces {len(eleve)} zones suspectes en zones "
+        "blanches confirmées ou écartées — et rendraient l'objectif « zones "
+        "blanches » mesurable, ce qu'aucun traitement des données actuelles ne "
+        "peut faire."), unsafe_allow_html=True)
+    st.markdown("")
+    cols = st.columns(3, gap="small")
+    for col, (titre, corps) in zip(cols, A_PUBLIER):
+        col.markdown(
+            f'<div class="carte" style="border-top:3px solid {T.VERT}">'
+            f'<div style="font-size:0.92rem;font-weight:620;color:{T.ENCRE};'
+            f'line-height:1.35;margin-bottom:0.5rem">{titre}</div>'
+            f'<div style="font-size:0.8rem;color:{T.ENCRE_2};line-height:1.6">'
+            f'{corps}</div></div>', unsafe_allow_html=True)
+    st.markdown("")
+    st.markdown(T.lecture(
+        "<b>En attendant :</b> une vérification de terrain ciblée — relevé de "
+        "signal par opérateur au chef-lieu de chaque canton à risque élevé — "
+        "coûte peu, et suffit à confirmer ou écarter chaque zone de la liste."),
+        unsafe_allow_html=True)

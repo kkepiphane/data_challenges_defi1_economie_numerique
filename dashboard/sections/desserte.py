@@ -175,17 +175,21 @@ def _densite(pref, vue, ctx: dict) -> None:
                                    "sous_equipes_densite.csv", "text/csv",
                                    icon=":material/download:", key="dl_densite")
         grand = m.loc[m.manque_densite.idxmax()] if len(m) else None
-        if grand is not None and grand.manque_densite > 0:
+        # Le constat « le premier besoin n'est pas rural » n'est vrai que si le
+        # territoire en tete est effectivement urbain : un filtre sur une
+        # region rurale le rendrait faux.
+        if (grand is not None and grand.manque_densite > 0
+                and grand.densite_hab_km2 >= 500):
+            dens = f"{grand.densite_hab_km2:,.0f}".replace(",", " ")
+            vol = f"{int(grand.manque_densite):,}".replace(",", " ")
             st.markdown(T.lecture(
                 f"En volume, le premier besoin n'est pas rural : "
-                f"<b>{grand.prefecture}</b> ({grand.densite_hab_km2:,.0f} "
-                f"hab./km²) manque de <b>{int(grand.manque_densite):,} points</b> "
-                "au regard de sa densité, et n'est pourtant que "
-                f"<b>{int(grand.rang_DCPI)}ᵉ sur 39</b> dans l'indice de "
-                "priorité, qui raisonne en habitants par point et non en "
-                "volume. Ce besoin périurbain appelle un traitement distinct "
-                "des priorités rurales.".replace(",", " ")),
-                unsafe_allow_html=True)
+                f"<b>{grand.prefecture}</b> ({dens} hab./km²) manque de "
+                f"<b>{vol} points</b> au regard de sa densité, et n'est "
+                f"pourtant que <b>{int(grand.rang_DCPI)}ᵉ sur 39</b> dans "
+                "l'indice de priorité, qui raisonne en habitants par point et "
+                "non en volume. Ce besoin périurbain appelle un traitement "
+                "distinct des priorités rurales."), unsafe_allow_html=True)
 
 
 def afficher(ctx: dict) -> None:

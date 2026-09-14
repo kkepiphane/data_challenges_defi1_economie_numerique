@@ -100,6 +100,30 @@ def mobile_money_operateurs() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
+def zones_blanches() -> pd.DataFrame:
+    """373 cantons : temoins de couverture, score de risque, classe.
+    Produit par `src/zones_blanches.py` — un PROXY, pas une mesure radio."""
+    return pd.read_csv(PROCESSED / "zones_blanches_canton.csv")
+
+
+@st.cache_data(show_spinner=False)
+def zones_blanches_variantes() -> pd.DataFrame:
+    return pd.read_csv(PROCESSED / "zones_blanches_variantes.csv")
+
+
+@st.cache_data(show_spinner=False)
+def geojson_cantons() -> dict:
+    with open(PROCESSED / "cantons.geojson", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@st.cache_data(show_spinner=False)
+def vide_temoins() -> pd.DataFrame:
+    """Mailles de 2 km situees a plus de 10 km de tout agent Mobile Money."""
+    return pd.read_csv(PROCESSED / "vide_temoins.csv")
+
+
+@st.cache_data(show_spinner=False)
 def cantons_acces() -> pd.DataFrame:
     return pd.read_csv(PROCESSED / "acces_canton.csv")
 
@@ -176,6 +200,7 @@ def controles_chaine() -> pd.DataFrame:
         "indicateurs": "Indicateurs",
         "acces_spatial": "Analyse spatiale",
         "dcpi": "Indice de priorite",
+        "zones_blanches": "Zones a risque",
     }
     lignes = []
     for fichier, etape in etapes.items():

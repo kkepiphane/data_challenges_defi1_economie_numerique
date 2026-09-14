@@ -2,7 +2,7 @@
 
 Genere par `src/build_livrable.py`.
 
-Archive : `reports/tableau_de_bord_togo.zip` — 0.5 Mo, 38 fichiers.
+Archive : `reports/tableau_de_bord_togo.zip` — 0.6 Mo, 44 fichiers.
 
 L'archive est EXTRAITE hors du projet puis EXECUTEE : les sept
 pages tournent depuis son seul contenu avant qu'elle soit
@@ -11,16 +11,17 @@ declaree valide.
 | Controle | Resultat | Detail |
 |---|---|---|
 | Archive lisible et sans entrée corrompue | OK | intégrité vérifiée |
-| Les 10 fichiers de données sont présents | OK | 10 fichiers |
+| Les 14 fichiers de données sont présents | OK | 14 fichiers |
 | Notice et dépendances embarquées | OK | README.md + requirements.txt |
-| Aucun cache Python dans l'archive | OK | 38 entrées |
-| Archive sous 10 Mo | OK | 0.5 Mo |
+| Aucun cache Python dans l'archive | OK | 44 entrées |
+| Archive sous 10 Mo | OK | 0.6 Mo |
 | Page « Vue d'ensemble » | OK | 26 blocs, 0 tables |
 | Page « Infrastructures » | OK | 30 blocs, 1 tables |
-| Page « Desserte & population » | OK | 22 blocs, 1 tables |
+| Page « Desserte & population » | OK | 35 blocs, 2 tables |
 | Page « Territoires prioritaires » | OK | 32 blocs, 2 tables |
+| Page « Couverture & zones blanches » | OK | 37 blocs, 2 tables |
 | Page « Arbitrage » | OK | 31 blocs, 2 tables |
-| Page « Plan d'action » | OK | 36 blocs, 1 tables |
+| Page « Plan d'action » | OK | 37 blocs, 1 tables |
 | Page « Méthode & limites » | OK | 30 blocs, 2 tables |
 | Feuille de style réémise à chaque rendu | OK | 4 rendus successifs : [True, True, True, True] |
 | Feuille de style conservée après navigation | OK | clic sur « Arbitrage » dans la navigation |

@@ -48,6 +48,7 @@ python src/build_geo.py          # contours, superficies, densités
 python src/build_indicators.py   # déduplication, ratios par habitant
 python src/spatial_access.py     # distances (reprojection EPSG:32631)
 python src/priority_index.py     # indice DCPI + analyse de sensibilité
+python src/zones_blanches.py      # zones à risque de zone blanche (proxy par canton)
 python src/build_app_data.py     # paquet léger lu par l'application
 python src/build_deck_figures.py # visuels du support
 python src/build_deck.py         # support de présentation, 10 diapositives

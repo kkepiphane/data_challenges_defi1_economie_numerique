@@ -3,19 +3,20 @@ ACCES AUX TELECOMMUNICATIONS ET AUX SERVICES NUMERIQUES — TOGO
 ===============================================================
 Lancement :  streamlit run streamlit_app.py
 
-Tableau de bord d'aide a la decision publique. Les sept pages suivent le
+Tableau de bord d'aide a la decision publique. Les huit pages suivent le
 raisonnement d'un rapport, pas l'arborescence des donnees :
 
     VUE D'ENSEMBLE  ce qu'il faut retenir en trente secondes
     INFRASTRUCTURES  ce qui existe, apres deduplication
     DESSERTE        ce que cela donne par habitant
     PRIORITES       ou le manque est le plus fort, et si le classement tient
+    COUVERTURE      la donnee absente, et les zones a investiguer (proxy)
     ARBITRAGE       reglez les ponderations, chiffrez la couverture
     PLAN D'ACTION   quelles interventions les deficits mesures appellent
     METHODE         sources, controles, pistes ecartees, limites
 
 La navigation est laterale et groupee par INTENTION : etablir le diagnostic,
-puis decider. Sept entrees tiennent verticalement sans se serrer, ce qu'une
+puis decider. Huit entrees tiennent verticalement sans se serrer, ce qu'une
 barre horizontale n'aurait pas permis sans rogner les intitules.
 
 Le tableau de bord ne recalcule rien : il lit les fichiers produits et
@@ -33,10 +34,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import data as D                                       # noqa: E402
 import theme as T                                      # noqa: E402
-from sections import (apercu, arbitrage, desserte,  # noqa: E402
-                      infrastructures, methode, plan_action, priorites)
+from sections import (apercu, arbitrage, couverture,  # noqa: E402
+                      desserte, infrastructures, methode, plan_action,
+                      priorites)
 
-# L'ordre est celui de la demonstration : les quatre premieres pages etablissent
+# L'ordre est celui de la demonstration : les cinq premieres pages etablissent
 # le diagnostic, les trois dernieres en tirent les consequences.
 # Chaque entree : (intitule, icone, fonction d'affichage).
 #
@@ -51,6 +53,8 @@ NAVIGATION = [
         ("Infrastructures", ":material/cell_tower:", infrastructures.afficher),
         ("Desserte & population", ":material/groups:", desserte.afficher),
         ("Territoires prioritaires", ":material/map:", priorites.afficher),
+        ("Couverture & zones blanches", ":material/signal_cellular_off:",
+         couverture.afficher),
     ]),
     ("Décider", [
         ("Arbitrage", ":material/tune:", arbitrage.afficher),

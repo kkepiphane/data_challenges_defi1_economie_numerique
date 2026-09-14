@@ -108,7 +108,7 @@ def afficher(ctx: dict) -> None:
     robustes = set(sens[sens.frequence_top10 >= SEUIL_ROBUSTE].prefecture)
 
     st.markdown(T.bandeau(
-        "Décision · 05", "Arbitrage",
+        "Décision · 06", "Arbitrage",
         "Le classement dépend de ce que vous décidez de faire compter. "
         "Réglez les quatre poids, observez ce qui bouge — puis convertissez "
         "un objectif de desserte en nombre de points à ouvrir."),

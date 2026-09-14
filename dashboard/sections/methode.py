@@ -40,8 +40,10 @@ LIMITES = [
      "Aucune donnée de couverture radio n'existe dans les sources ouvertes "
      "mobilisées, et les couches d'antennes du catalogue national ne sont pas "
      "publiques. **L'objectif « identifier les zones blanches » n'est donc pas "
-     "traité comme tel.** Ce qui est mesuré est un déficit d'accès aux "
-     "services : *une zone sans agence ni agent Mobile Money n'est pas "
+     "mesurable avec les données ouvertes disponibles** : il est traité comme "
+     "une limite critique et un besoin prioritaire de données. La page "
+     "« Couverture & zones blanches » désigne des cantons **à investiguer** à "
+     "partir d'un proxy déclaré comme tel : *une zone sans agence ni agent Mobile Money n'est pas "
      "nécessairement une zone sans réseau mobile.* C'est la limite la plus "
      "importante de ce travail.",
      T.STATUT["critique"]),
@@ -102,7 +104,7 @@ ECARTEES = [
 
 def afficher(ctx: dict) -> None:
     st.markdown(T.bandeau(
-        "Décision · 07", "Méthode & limites",
+        "Décision · 08", "Méthode & limites",
         "D'où viennent ces chiffres, jusqu'où peut-on s'y fier, et que ne "
         "disent-ils pas ?"), unsafe_allow_html=True)
 
