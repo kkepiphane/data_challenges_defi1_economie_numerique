@@ -274,6 +274,22 @@ def main() -> None:
     tgc_seul = int((mm.operateur == "Togocom").sum())
     moov_seul = int((mm.operateur == "Moov").sum())
 
+    etab = pd.read_csv(PROCESSED / "etablissements.csv")
+    agences = etab[etab.type_infrastructure != "Data center"]
+    n_agences = len(agences)
+    n_agences_moov = int((agences.operateur == "Moov").sum())
+    n_agences_tgc = int((agences.operateur == "Togocom").sum())
+    n_dc = int((etab.type_infrastructure == "Data center").sum())
+    # Meme regression que la page Desserte du tableau de bord.
+    ld = _np.log10(pref.densite_hab_km2)
+    lp = _np.log10(pref.points_mm_pour_10k_hab)
+    pente, orig = _np.polyfit(ld, lp, 1)
+    r2_densite = float(1 - ((lp - (pente * ld + orig)) ** 2).sum()
+                       / ((lp - lp.mean()) ** 2).sum())
+    zb = pd.read_csv(PROCESSED / "zones_blanches_canton.csv")
+    n_zb_eleve = int((zb.classe == "Élevé").sum())
+    n_zb_sans = int(zb.sans_temoin.sum())
+
     def _fr(x: float, dec: int = 1) -> str:
         return f"{x:.{dec}f}".replace(".", ",")
 
@@ -545,8 +561,8 @@ def main() -> None:
     _puces(s, MARGE, Inches(2.15), Inches(6.1), [
         ("La couverture réseau n'est pas mesurée",
          "Une zone sans agence ni agent Mobile Money n'est pas nécessairement "
-         "une zone sans réseau mobile. C'est la limite la plus importante de "
-         "ce travail."),
+         f"une zone sans réseau mobile. Les {n_zb_eleve} cantons signalés par "
+         "le proxy sont à vérifier, pas des zones blanches avérées."),
         ("Les agences CANAL+ sont absentes",
          "Fichier source vide. Le déficit d'agences ne porte que sur Moov et "
          "Togocom."),
@@ -569,47 +585,67 @@ def main() -> None:
     ])
 
     # ---------------------------------------------------------------- 10
-    s = _diapo(prs, "Conclusion", "Réponse à la problématique",
-               f"{len(stables)} territoires, {_esp(pop_stable)} habitants, et un ordre "
-               "d'intervention qui résiste au changement de méthode.", 9)
-    _zone(s, MARGE, Inches(2.15), Inches(6.3), Inches(0.3),
-          "OÙ INVESTIR EN PRIORITÉ", 8, True, ENCRE_MUET, police="Consolas")
-    noms = ", ".join(stables.prefecture.tolist()[:-1])
-    _zone(s, MARGE, Inches(2.5), Inches(6.3), Inches(0.9),
-          f"{noms} et {stables.prefecture.tolist()[-1]}.",
-          15, True, ENCRE, interligne=1.3)
-    _puces(s, MARGE, Inches(3.65), Inches(6.3), [
-        ("Pourquoi ces territoires",
-         "Ils cumulent les trois déficits mesurés — desserte, présence "
-         "d'agences, éloignement — pour une population qui les place au-delà "
-         "du seuil où l'intervention devient rentable en nombre d'habitants "
-         "touchés."),
-        ("Pourquoi on peut le défendre",
-         "2 000 pondérations testées, corrélation moyenne 0,971. 25 contrôles "
-         "arithmétiques au vert. Aucune valeur imputée. Les approches "
-         "écartées sont documentées avec leurs preuves."),
-    ])
-    for i, (lib, val, note, coul) in enumerate([
-            ("Territoires prioritaires", f"{len(stables)}", "sur 39 préfectures",
-             VERT),
-            ("Habitants concernés", _esp(pop_stable),
-             f"{pop_stable / 8_095_498:.0%} de la population", SERIE_1),
-            ("Stabilité du classement", "0,971",
-             "corrélation sur 2 000 pondérations", SERIE_3),
-            ("Contrôles au vert", "25 / 25", "rejoués à chaque exécution",
-             VERT)]):
-        _kpi(s, Inches(7.3) + Inches(2.78) * (i % 2),
-             Inches(2.15) + Inches(1.5) * (i // 2), Inches(2.6),
-             lib, val, note, coul)
-    _rect(s, Inches(7.3), Inches(5.35), Inches(5.4), Inches(1.35), BLANC,
-          BORDURE, 0.75)
-    _rect(s, Inches(7.3), Inches(5.35), Inches(0.035), Inches(1.35), CRITIQUE)
-    _zone(s, Inches(7.55), Inches(5.55), Inches(4.95), Inches(1.0),
-          "Ce que ce travail ne prétend pas faire : mesurer la couverture "
-          "réseau. Compléter ce diagnostic exigerait l'ouverture des couches "
-          "d'antennes du catalogue national — c'est la première recommandation "
-          "adressée au producteur de données.",
-          10, False, ENCRE_2, interligne=1.32)
+    # La conclusion prend la forme d'un BILAN PAR OBJECTIF : le jury lit, pour
+    # chaque objectif du sujet, ce qui a ete repondu — et pour la couverture
+    # mobile, pourquoi elle n'a pas pu l'etre. Le plafond de dix pages impose
+    # que ce bilan remplace la conclusion plutot que de s'y ajouter.
+    s = _diapo(prs, "Conclusion", "Objectifs du sujet → réponses fournies",
+               "Quatre objectifs traités ; la couverture mobile, non mesurable "
+               "en open data, devient une limite critique.", 9)
+    lignes_bilan = [
+        ("1 · Cartographier agences et centres de données",
+         f"{n_agences} agences d'opérateur ({n_agences_moov} Moov, "
+         f"{n_agences_tgc} Togocom) et {n_dc} centres de données, tous à Lomé. "
+         "« Télécom » est un doublon intégral ; CANAL+ est vide à la source.",
+         "Traité", SERIE_3),
+        ("2 · Mobile Money au regard de la population",
+         f"{_esp(national)} habitants par point en moyenne, de 1 à "
+         f"{_fr(rapport)} entre préfectures ; la moitié la moins desservie de "
+         f"la population ne dispose que de {part_moitie:.0%} des points."
+         .replace("%", " %"),
+         "Traité", SERIE_3),
+        ("3 · Infrastructures et densité démographique",
+         f"{quadrant} préfectures peuplées et sous-desservies. La densité "
+         f"n'explique que {r2_densite:.0%} des écarts d'équipement : le déficit "
+         "n'est pas la fatalité d'un territoire rural.".replace("%", " %"),
+         "Traité", SERIE_3),
+        ("4 · Couverture réseau et zones blanches",
+         "Non mesurable avec les données ouvertes disponibles — couches "
+         "antennes hors open data. Traitée comme limite critique et besoin "
+         f"prioritaire de données. Proxy déclaré : {n_zb_eleve} cantons à "
+         f"investiguer, dont {n_zb_sans} sans aucun agent Mobile Money.",
+         "Limite critique", CRITIQUE),
+        ("5 · Prioriser les investissements",
+         f"{len(stables)} préfectures stables sur 2 000 pondérations "
+         f"(corrélation 0,971), {_esp(pop_stable)} habitants : "
+         + ", ".join(stables.prefecture.tolist()[:5]) + "…",
+         "Traité", SERIE_3),
+    ]
+    y = Inches(2.12)
+    h_ligne = Inches(0.8)
+    for objectif, reponse, statut, coul in lignes_bilan:
+        critique = coul == CRITIQUE
+        _rect(s, MARGE, y, L - 2 * MARGE, h_ligne - Inches(0.08),
+              RGBColor(0xFB, 0xEE, 0xEE) if critique else BLANC, BORDURE, 0.75)
+        _rect(s, MARGE, y, Inches(0.045), h_ligne - Inches(0.08), coul)
+        _zone(s, MARGE + Inches(0.22), y + Inches(0.13), Inches(3.35),
+              Inches(0.5), objectif, 11, True, ENCRE, interligne=1.2)
+        _zone(s, MARGE + Inches(3.65), y + Inches(0.1), Inches(0.3),
+              Inches(0.4), "→", 16, True, ENCRE_MUET)
+        _zone(s, MARGE + Inches(4.0), y + Inches(0.1), Inches(6.35),
+              Inches(0.6), reponse, 9.5, critique, ENCRE if critique else ENCRE_2,
+              interligne=1.25)
+        _rect(s, L - MARGE - Inches(1.55), y + Inches(0.2), Inches(1.4),
+              Inches(0.32), coul)
+        _zone(s, L - MARGE - Inches(1.55), y + Inches(0.255), Inches(1.4),
+              Inches(0.24), statut.upper(), 8, True, BLANC,
+              aligne=PP_ALIGN.CENTER, police="Consolas")
+        y += h_ligne
+    _zone(s, MARGE, y + Inches(0.02), L - 2 * MARGE, Inches(0.3),
+          "Première recommandation au producteur de données : ouvrir les "
+          "couches « Tours télécoms » du catalogue national, pour transformer "
+          "les zones suspectes en zones blanches confirmées ou écartées.",
+          10, True, RGBColor(0x0F, 0x4D, 0x3B), interligne=1.25)
 
     SORTIE.parent.mkdir(parents=True, exist_ok=True)
     prs.save(SORTIE)

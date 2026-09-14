@@ -66,7 +66,7 @@ def afficher(ctx: dict) -> None:
     vue = pref[pref.prefecture.isin(ctx["prefectures"])]
 
     st.markdown(T.bandeau(
-        "Décision · 06", "Plan d'action",
+        "Décision · 07", "Plan d'action",
         "Quelles interventions les déficits mesurés appellent-ils, sur quels "
         "territoires, et pour combien d'habitants ?"), unsafe_allow_html=True)
 
