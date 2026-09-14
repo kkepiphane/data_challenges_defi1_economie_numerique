@@ -187,7 +187,11 @@ def afficher(ctx: dict) -> None:
                 unsafe_allow_html=True)
 
             st.markdown("")
-            haut = classe.head(12)[
+            if ctx["filtre_actif"]:
+                st.caption("Rangs **nationaux** (sur 39), restreints aux "
+                           "territoires du filtre : un rang n'a de sens que "
+                           "rapporté à tout le pays.")
+            haut = classe[classe.prefecture.isin(ctx["prefectures"])].head(12)[
                 ["rang_perso", "rang_DCPI", "mouvement", "prefecture", "region",
                  "population", "DCPI_perso"]].copy()
             haut["mouvement"] = haut.mouvement.map(
@@ -215,6 +219,10 @@ def afficher(ctx: dict) -> None:
     st.markdown(T.etiquette("2 · Ce que cela demanderait d'équiper", "1.5rem"), unsafe_allow_html=True)
 
     cadrage, resultat = st.columns([1, 1.55], gap="medium")
+    # Le plan de couverture porte sur le perimetre filtre, dans l'ordre du
+    # classement repondere : « les N premiers de MA region », par exemple.
+    candidats = classe[classe.prefecture.isin(ctx["prefectures"])]
+    n_max = len(candidats)
 
     with cadrage:
         with T.bloc("Hypothèses de l'exercice"):
@@ -222,9 +230,14 @@ def afficher(ctx: dict) -> None:
                 "Objectif : habitants par point de service", 150, 900, 409, 10,
                 help="409 est la moyenne nationale actuelle. Viser plus bas, "
                      "c'est viser mieux que la moyenne d'aujourd'hui.")
-            combien = st.slider(
-                "Nombre de territoires retenus", 1, 39, min(9, len(classe)),
-                help="Les N premiers du classement que vous venez de régler.")
+            # Un curseur exige min < max : un seul territoire filtre n'en
+            # laisse aucun choix a faire.
+            combien = (st.slider(
+                "Nombre de territoires retenus", 1, n_max, min(9, n_max),
+                help="Les N premiers du classement que vous venez de régler"
+                     + (", dans le périmètre filtré." if ctx["filtre_actif"]
+                        else "."))
+                if n_max > 1 else 1)
             st.markdown(T.lecture(
                 "Une seule règle, arithmétique : atteindre un point pour "
                 f"<b>{objectif}</b> habitants sur un territoire de P habitants "
@@ -232,7 +245,7 @@ def afficher(ctx: dict) -> None:
                 "Aucun coût n'est produit ici — <b>les prix ne figurent dans "
                 "aucune source du projet</b>."), unsafe_allow_html=True)
 
-    plan = _plan_couverture(classe.head(combien), objectif)
+    plan = _plan_couverture(candidats.head(combien), objectif)
     pop_touchee = int(plan.population.sum())
     a_creer = int(plan.points_a_creer.sum())
     guichets = int(plan.agences_a_ouvrir.sum())
@@ -262,7 +275,7 @@ def afficher(ctx: dict) -> None:
                 T.SERIE_3), unsafe_allow_html=True)
 
             st.markdown("")
-            courbe = _plan_couverture(classe, objectif)
+            courbe = _plan_couverture(candidats, objectif)
             cum_pop = courbe.population.cumsum() / D.POPULATION_NATIONALE
             cum_pts = courbe.points_a_creer.cumsum()
             import plotly.graph_objects as go

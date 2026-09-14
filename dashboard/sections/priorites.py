@@ -66,10 +66,14 @@ def afficher(ctx: dict) -> None:
     g, d = st.columns([1, 1.1], gap="medium")
 
     with g:
-        with T.bloc("Score de priorité par préfecture"):
+        with T.bloc("Score de priorité · cliquez pour ouvrir la fiche"):
             st.plotly_chart(
                 cartes.choroplethe(vue, geo, "DCPI", "Score DCPI", ".1f", 560),
-                width="stretch", config={"displayModeBar": False})
+                width="stretch", key="carte_priorites",
+                on_select=D.ouvrir_fiche(
+                    "carte_priorites",
+                    vue.dropna(subset=["DCPI"]).prefecture.tolist()),
+                selection_mode="points", config={"displayModeBar": False})
 
     with d:
         with T.bloc("Classement · en bleu, les priorités robustes"):
@@ -92,7 +96,11 @@ def afficher(ctx: dict) -> None:
             fig.update_layout(height=560, showlegend=False,
                               xaxis_title="Score DCPI", yaxis_title=None,
                               margin=dict(l=4, r=40, t=6, b=34))
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", key="barres_priorites",
+                            on_select=D.ouvrir_fiche(
+                                "barres_priorites", c.prefecture.tolist()),
+                            selection_mode="points",
+                            config={"displayModeBar": False})
 
     # ======================================================== sensibilité
     st.markdown("")
@@ -139,8 +147,14 @@ def afficher(ctx: dict) -> None:
     st.markdown("")
     st.markdown(T.etiquette("Fiche de territoire", "1.2rem"), unsafe_allow_html=True)
     ordre = vue.sort_values("DCPI", ascending=False).prefecture.tolist()
-    choix = st.selectbox("Préfecture", ordre, index=0,
+    # La fiche peut avoir ete ouverte par un clic, ici ou sur une autre page.
+    # Un territoire hors du filtre courant n'est pas une option valide.
+    if st.session_state.get(D.CLE_FICHE) not in ordre:
+        st.session_state[D.CLE_FICHE] = ordre[0]
+    choix = st.selectbox("Préfecture", ordre, key=D.CLE_FICHE,
                          label_visibility="collapsed")
+    st.caption("Choisissez un territoire ici, ou cliquez-le sur la carte ou "
+               "le classement ci-dessus.")
     r = pref[pref.prefecture == choix].iloc[0]
     f = sens[sens.prefecture == choix]
 
@@ -206,6 +220,10 @@ def afficher(ctx: dict) -> None:
                 "Hab./point": "{:,.0f}", "Dist. (km)": "{:,.0f}",
                 "DCPI": "{:.1f}", "Rang": "{:.0f}"}, thousands=" ", decimal=","),
                 width="stretch", hide_index=True, height=280)
+            st.download_button(
+                f"Télécharger les communes de {choix} (CSV)", D.csv(t),
+                f"communes_{choix}.csv", "text/csv",
+                icon=":material/download:", key="dl_communes")
             st.markdown(T.source(
                 "Rang établi sur les 117 communes. Les scores communaux et "
                 "préfectoraux ne sont pas comparables : la composante "

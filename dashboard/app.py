@@ -62,6 +62,13 @@ PAGES = {nom: fn for _, items in NAVIGATION for nom, _, fn in items}
 DEFAUT = "Vue d'ensemble"
 
 
+def _retirer_filtre() -> None:
+    # Dans un rappel : c'est le seul moment ou l'etat d'un widget deja
+    # instancie peut etre reecrit.
+    st.session_state["filtre_regions"] = []
+    st.session_state["filtre_prefs"] = []
+
+
 def main() -> None:
     # TOUT ce qui doit exister a l'ecran est emis ICI, jamais au niveau module.
     #
@@ -108,21 +115,46 @@ def main() -> None:
         # Le filtre part VIDE, et non prerempli des cinq regions : « vide » vaut
         # deja « toutes » deux lignes plus bas. Afficher cinq pastilles pour
         # dire « aucun filtre » occupe de la place sans porter d'information.
-        sel_regions = filtres.multiselect("Région", regions, default=[],
+        # Pas de `default` : la valeur vit dans `st.session_state`, que le
+        # bouton « Retirer le filtre » reecrit. Les deux ensemble declenchent
+        # un avertissement Streamlit a l'ecran.
+        sel_regions = filtres.multiselect("Région", regions,
+                                          key="filtre_regions",
                                           label_visibility="collapsed",
                                           placeholder="Toutes les régions")
         if not sel_regions:
             sel_regions = regions
         prefs_dispo = sorted(pref[pref.region.isin(sel_regions)].prefecture)
-        sel_prefs = filtres.multiselect("Préfecture", prefs_dispo, default=[],
+        # Une prefecture retenue puis exclue par un changement de region
+        # sortirait des options : Streamlit leverait une erreur.
+        st.session_state["filtre_prefs"] = [
+            p for p in st.session_state.get("filtre_prefs", [])
+            if p in prefs_dispo]
+        sel_prefs = filtres.multiselect("Préfecture", prefs_dispo,
+                                        key="filtre_prefs",
                                         label_visibility="collapsed",
                                         placeholder="Toutes les préfectures")
 
-    ctx = {
-        "regions": sel_regions,
-        "prefectures": sel_prefs if sel_prefs else prefs_dispo,
-        "filtre_actif": bool(sel_prefs) or len(sel_regions) < len(regions),
-    }
+        ctx = {
+            "regions": sel_regions,
+            "prefectures": sel_prefs if sel_prefs else prefs_dispo,
+            "filtre_actif": bool(sel_prefs) or len(sel_regions) < len(regions),
+        }
+        # Le filtre suit l'utilisateur de page en page : il doit donc rester
+        # VISIBLE, et se lever d'un geste.
+        if ctx["filtre_actif"]:
+            n = len(ctx["prefectures"])
+            pop = int(pref[pref.prefecture.isin(ctx["prefectures"])]
+                      .population.sum())
+            filtres.caption(
+                f"Filtre actif sur toutes les pages : **{n} préfecture"
+                f"{'s' if n > 1 else ''}**, {pop:,} habitants "
+                f"({pop / D.POPULATION_NATIONALE:.0%})".replace(",", " "))
+            filtres.button("Retirer le filtre", icon=":material/filter_alt_off:",
+                           width="stretch", on_click=_retirer_filtre)
+        else:
+            filtres.caption("Astuce : cliquez une préfecture sur une carte ou "
+                            "un classement pour ouvrir sa fiche.")
 
     # Les cles des blocs sont un numero d'ordre : il doit repartir de zero a
     # chaque rendu, sinon Streamlit remonterait tout l'arbre a chaque clic.
