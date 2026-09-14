@@ -13,5 +13,5 @@
 
 streamlit==1.61.1      # application
 pandas==2.3.3          # lecture et agrégation des tables
-numpy==2.2.6           # repondération de l'indice, simulations de couverture
+numpy==2.3.5           # (>= 2.3.2 : roues Python 3.14) repondération de l'indice, simulations de couverture
 plotly==6.9.0          # graphiques et cartes interactifs
