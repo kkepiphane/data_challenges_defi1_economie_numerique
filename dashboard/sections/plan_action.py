@@ -11,6 +11,7 @@ une faisabilite ou une rentabilite, qui ne sont pas dans les donnees.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -176,19 +177,39 @@ def afficher(ctx: dict) -> None:
 
     # ======================================================== tableau complet
     st.markdown("")
-    with st.expander("Voir le détail par territoire"):
-        t = (actions.pivot_table(index=["rang", "prefecture", "region",
-                                        "population"],
-                                 columns="levier", aggfunc="size",
-                                 fill_value=0)
-             .reset_index().sort_values("rang"))
-        for c in t.columns[4:]:
-            t[c] = t[c].map(lambda v: "●" if v else "")
-        t = t.rename(columns={"rang": "Rang", "prefecture": "Préfecture",
-                              "region": "Région", "population": "Population"})
-        st.dataframe(t.style.format({"Population": "{:,.0f}",
-                                     "Rang": "{:.0f}"}, thousands=" ", decimal=","),
-                     width="stretch", hide_index=True)
+    with st.expander("Voir le détail par territoire", expanded=ctx["filtre_actif"]):
+        # Tous les territoires du filtre, y compris ceux qu'aucun levier ne
+        # declenche : une ligne vide est une information (rien d'urgent).
+        national = D.POPULATION_NATIONALE / pref.points_mm.sum()
+        base = vue[["rang_DCPI", "prefecture", "region", "population",
+                    "points_mm"]].rename(columns={"rang_DCPI": "rang"})
+        # Volume d'equipement pour ramener chaque territoire a la moyenne
+        # nationale : meme regle arithmetique que la page Arbitrage.
+        base["a_ouvrir"] = (np.ceil(base.population / national)
+                            - base.points_mm).clip(lower=0).astype(int)
+        coches = (pd.crosstab(actions.prefecture, actions.levier)
+                  .gt(0).replace({True: "●", False: ""}))
+        t = (base.merge(coches, left_on="prefecture", right_index=True,
+                        how="left").fillna("").sort_values("rang"))
+        t = t.rename(columns={
+            "rang": "Rang", "prefecture": "Préfecture", "region": "Région",
+            "population": "Population", "points_mm": "Points MM",
+            "a_ouvrir": f"Points à ouvrir (moy. {national:,.0f} hab./pt)"
+            .replace(",", " ")})
+        st.dataframe(t.style.format(
+            {"Population": "{:,.0f}", "Rang": "{:.0f}", "Points MM": "{:,.0f}",
+             t.columns[5]: "{:,.0f}"}, thousands=" ", decimal=","),
+            width="stretch", hide_index=True)
+        manque = int(base.a_ouvrir.sum())
+        st.markdown(T.source(
+            f"Ramener chaque territoire du périmètre à la moyenne nationale "
+            f"demanderait <b>{manque:,} points Mobile Money</b> supplémentaires "
+            f"(+{manque / max(int(base.points_mm.sum()), 1):.0%} du parc du "
+            "périmètre). Pour d'autres objectifs, voir la page Arbitrage."
+            .replace(",", " ")), unsafe_allow_html=True)
+        st.download_button("Télécharger le plan par territoire (CSV)",
+                           D.csv(t, ctx), "plan_action.csv", "text/csv",
+                           icon=":material/download:", key="dl_plan")
 
     st.markdown(
         T.lecture(

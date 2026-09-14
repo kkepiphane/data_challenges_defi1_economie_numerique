@@ -84,8 +84,11 @@ def choroplethe(table, geojson: dict, colonne: str, titre_echelle: str,
         z=t[colonne], colorscale=[[i / (len(echelle) - 1), c]
                                   for i, c in enumerate(echelle)],
         marker=dict(line=dict(color="#ffffff", width=1.4), opacity=0.9),
+        # Le nom en DERNIERE position : c'est lui que lit
+        # `data.territoire_selectionne` quand la carte est cliquee.
         customdata=np.stack([t.region, t.population, t.points_mm,
-                             t.agences_actives, t[colonne]], axis=-1),
+                             t.agences_actives, t[colonne], t.prefecture],
+                            axis=-1),
         hovertemplate=("<b>%{location}</b><br>"
                        "<span style='color:#8b8a84'>%{customdata[0]}</span><br>"
                        "<br>Population&nbsp;: %{customdata[1]:,.0f}<br>"

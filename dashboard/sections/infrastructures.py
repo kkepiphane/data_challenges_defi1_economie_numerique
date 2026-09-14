@@ -120,10 +120,14 @@ def afficher(ctx: dict) -> None:
 
     g2, d2 = st.columns([3.1, 1], gap="medium")
     with g2:
-        with T.bloc(choix):
+        with T.bloc(f"{choix} · cliquez un territoire pour ouvrir sa fiche"):
             st.plotly_chart(
                 cartes.choroplethe(vue, geo, col, titre_ech, fmt, 600),
-                width="stretch", config={"displayModeBar": False})
+                width="stretch", key="carte_infra",
+                on_select=D.ouvrir_fiche(
+                    "carte_infra", vue.dropna(subset=[col]).prefecture.tolist(),
+                    True),
+                selection_mode="points", config={"displayModeBar": False})
     with d2:
         st.markdown(T.question(question), unsafe_allow_html=True)
         st.markdown(T.lecture(lecture), unsafe_allow_html=True)
@@ -149,8 +153,12 @@ def afficher(ctx: dict) -> None:
                      "Densité (hab/km²)", "Points MM", "Hab./point MM",
                      "Agences actives", "Data centers", "Dist. médiane (km)",
                      "DCPI"]
-        st.dataframe(t.sort_values("DCPI", ascending=False).style.format({
+        t = t.sort_values("DCPI", ascending=False)
+        st.dataframe(t.style.format({
             "Population": "{:,.0f}", "Superficie (km²)": "{:,.0f}",
             "Densité (hab/km²)": "{:,.0f}", "Points MM": "{:,.0f}",
             "Hab./point MM": "{:,.0f}", "Dist. médiane (km)": "{:,.0f}",
             "DCPI": "{:.1f}"}, thousands=" ", decimal=","), width="stretch", hide_index=True)
+        st.download_button("Télécharger ce tableau (CSV)", D.csv(t, ctx),
+                           "infrastructures_prefectures.csv", "text/csv",
+                           icon=":material/download:", key="dl_infra")

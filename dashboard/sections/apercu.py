@@ -61,10 +61,14 @@ def afficher(ctx: dict) -> None:
             unsafe_allow_html=True)
 
     with d:
-        with T.bloc("Priorité d'intervention par préfecture"):
+        with T.bloc("Priorité d'intervention · cliquez un territoire pour "
+                    "ouvrir sa fiche"):
             fig = cartes.choroplethe(vue, geo, "DCPI", "Score DCPI",
                                      format_valeur=".1f", hauteur=372)
-            st.plotly_chart(fig, width="stretch",
+            noms = vue.dropna(subset=["DCPI"]).prefecture.tolist()
+            st.plotly_chart(fig, width="stretch", key="carte_apercu",
+                            on_select=D.ouvrir_fiche("carte_apercu", noms, True),
+                            selection_mode="points",
                             config={"displayModeBar": False})
 
     # ================================================================ KPI
@@ -128,7 +132,10 @@ def afficher(ctx: dict) -> None:
                 height=372, showlegend=False,
                 xaxis_title="Habitants par point Mobile Money",
                 yaxis_title=None, margin=dict(l=4, r=42, t=4, b=34))
-            st.plotly_chart(fig2, width="stretch",
+            st.plotly_chart(fig2, width="stretch", key="barres_apercu",
+                            on_select=D.ouvrir_fiche(
+                                "barres_apercu", c.prefecture.tolist(), True),
+                            selection_mode="points",
                             config={"displayModeBar": False})
             st.markdown(
                 T.source("Trait rouge : moyenne nationale de "

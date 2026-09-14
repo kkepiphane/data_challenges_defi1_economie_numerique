@@ -104,6 +104,64 @@ def cantons_acces() -> pd.DataFrame:
     return pd.read_csv(PROCESSED / "acces_canton.csv")
 
 
+def csv(df: pd.DataFrame, ctx: dict | None = None) -> bytes:
+    """Export CSV lisible par Excel (BOM UTF-8), avec en-tete de provenance.
+    Le filtre actif est rappele : un tableau detache de l'outil doit dire
+    sur quel perimetre il porte."""
+    perimetre = "39 préfectures"
+    if ctx and ctx.get("filtre_actif"):
+        perimetre = f"{len(ctx['prefectures'])} préfecture(s) : " + ", ".join(
+            ctx["prefectures"])
+    entete = ("# Défi 1 — Togo · export du tableau de bord\n"
+              f"# Périmètre : {perimetre}\n"
+              "# Sources : PRISE 2021-2022, RGPH-5 2022, COD-AB 2021\n")
+    return (entete + df.to_csv(index=False)).encode("utf-8-sig")
+
+
+def territoire_selectionne(cle: str, noms: list[str]) -> str | None:
+    """Prefecture cliquee sur le graphique Plotly de cle `cle`.
+
+    `noms` est la liste des prefectures dans l'ORDRE de la premiere trace :
+    c'est le repli quand le point ne porte ni `location` (cartes) ni libelle
+    d'axe (barres) — l'indice du point suffit alors a retrouver le territoire.
+    """
+    etat = st.session_state.get(cle) or {}
+    points = (etat.get("selection") or {}).get("points") or []
+    connus = set(noms)
+    for p in points:
+        for champ in ("location", "y", "x", "hovertext", "text"):
+            if p.get(champ) in connus:
+                return p[champ]
+        donnees = p.get("customdata")
+        if isinstance(donnees, list) and donnees and donnees[-1] in connus:
+            return donnees[-1]
+        i = p.get("point_index")
+        if p.get("curve_number", 0) == 0 and isinstance(i, int) and i < len(noms):
+            return noms[i]
+    return None
+
+
+PAGE_FICHE = "Territoires prioritaires"
+CLE_FICHE = "fiche_territoire"
+
+
+def ouvrir_fiche(cle: str, noms: list[str], changer_de_page: bool = False):
+    """Rappel `on_select` : un clic sur un territoire ouvre sa fiche.
+
+    Un RAPPEL, et non la lecture de la selection au fil du rendu : il ne
+    s'execute qu'au clic. Lue a chaque rendu, la selection — qui persiste sur
+    le graphique — ecraserait a chaque interaction le choix fait ensuite dans
+    la liste deroulante de la fiche.
+    """
+    def _rappel() -> None:
+        nom = territoire_selectionne(cle, noms)
+        if nom:
+            st.session_state[CLE_FICHE] = nom
+            if changer_de_page:
+                st.session_state.page = PAGE_FICHE
+    return _rappel
+
+
 @st.cache_data(show_spinner=False)
 def rapport(nom: str) -> str:
     chemin = REPORTS / f"{nom}.md"
