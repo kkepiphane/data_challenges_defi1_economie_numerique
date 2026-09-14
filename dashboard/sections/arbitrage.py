@@ -161,7 +161,9 @@ def afficher(ctx: dict) -> None:
     apparie = pref[["prefecture", "rang_DCPI"]].merge(
         classe[["prefecture", "rang_perso"]], on="prefecture", how="inner")
     assert len(apparie) == len(pref), "appariement incomplet des préfectures"
-    spearman = apparie.rang_DCPI.corr(apparie.rang_perso, method="spearman")
+    # Spearman = Pearson sur les rangs. `method="spearman"` importerait scipy,
+    # absent de l'application (voir requirements.txt).
+    spearman = apparie.rang_DCPI.rank().corr(apparie.rang_perso.rank())
     identiques = len(reference & nouveau)
     robustes_tenus = len(robustes & nouveau)
 
