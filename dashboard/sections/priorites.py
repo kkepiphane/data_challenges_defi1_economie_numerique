@@ -44,6 +44,27 @@ def afficher(ctx: dict) -> None:
         "d'habitants aujourd'hui mal desservis ?"), unsafe_allow_html=True)
 
     pop_stable = int(pref[pref.prefecture.isin(stables)].population.sum())
+    # Les plus robustes : presentes dans le top 10 pour TOUTES les
+    # ponderations testees, dans l'ordre de leur rang median.
+    certaines = (sens[sens.frequence_top10 >= 0.999]
+                 .sort_values(["rang_median", "rang_min"]).prefecture.tolist())
+    plus_faible = variantes.iloc[1:].sort_values("spearman").iloc[0]
+    tete = pref.loc[pref.rang_DCPI.idxmin()]
+    st.markdown(T.a_retenir([
+        f"<b>{D.liste_fr(certaines[:5])}</b> sont les priorités les plus "
+        f"robustes : dans le top 10 pour 100 % des 2 000 pondérations testées.",
+        f"<b>{len(stables)} préfectures</b> restent prioritaires dans au moins "
+        f"90 % des cas : <b>{pop_stable:,}".replace(",", " ")
+        + f" habitants</b>, soit {pop_stable / D.POPULATION_NATIONALE * 100:.0f} % de "
+        "la population.",
+        f"La moitié la moins desservie de la population ne dispose que de "
+        f"<b>{D.part_points_moitie_moins_desservie(pref) * 100:.0f} % des points "
+        "Mobile Money</b>.",
+        "Le classement ne tient pas aux pondérations : corrélation moyenne "
+        f"<b>0,971</b>, et encore <b>{plus_faible.spearman:.2f}".replace(".", ",")
+        + "</b> pour la variante la plus éloignée.",
+    ]), unsafe_allow_html=True)
+
     k = st.columns(4, gap="small")
     k[0].markdown(T.kpi("Territoires prioritaires robustes",
                         f"{len(stables)}", "/ 39",
@@ -101,11 +122,46 @@ def afficher(ctx: dict) -> None:
                                 "barres_priorites", c.prefecture.tolist()),
                             selection_mode="points",
                             config={"displayModeBar": False})
+    regions = (pref[pref.prefecture.isin(stables)].region.value_counts())
+    repartition = D.liste_fr([f"{n} en {r}" for r, n in regions.items()])
+    st.markdown(T.conclusion(
+        f"{tete.prefecture} arrive en tête, avec un score de "
+        f"{tete.DCPI:.1f}".replace(".", ",") + " sur 100. Les "
+        f"{len(stables)} priorités robustes se répartissent ainsi : "
+        f"{repartition} — aucune dans le Golfe ni à Agoè-Nyivé."
+        if not pref[pref.prefecture.isin(stables)].prefecture.isin(
+            ["Golfe", "Agoè-Nyivé"]).any() else
+        f"{tete.prefecture} arrive en tête. Répartition des priorités "
+        f"robustes : {repartition}."), unsafe_allow_html=True)
 
     # ======================================================== sensibilité
     st.markdown("")
     st.markdown(T.etiquette("Robustesse", "1.2rem"), unsafe_allow_html=True)
     g2, d2 = st.columns([1.3, 1], gap="medium")
+
+    with d2:
+        st.markdown(T.conclusion(
+            f"{len(certaines)} préfectures sont dans le top 10 quelle que soit "
+            f"la pondération ; {len(stables) - len(certaines)} autres le sont "
+            "dans au moins 90 % des cas. Au-delà, le rang dépend des choix de "
+            "méthode : ces territoires ne sont pas présentés comme "
+            "prioritaires."), unsafe_allow_html=True)
+        st.markdown(T.lecture(
+            "Le trait rouge marque le seuil de 90 %. Chaque barre compte la part "
+            "des 2 000 pondérations aléatoires pour lesquelles le territoire "
+            "reste parmi les dix premiers."), unsafe_allow_html=True)
+        with st.expander("Variantes méthodologiques (détail)"):
+            t = variantes.copy()
+            t.columns = ["Variante", "Corrélation", "Top 10"]
+            t["Top 10"] = t["Top 10"].map(lambda v: f"{v}/10")
+            st.dataframe(t.style.format({"Corrélation": "{:.3f}"}, thousands=" ", decimal=","),
+                         width="stretch", hide_index=True, height=352)
+            st.markdown(
+                T.lecture(
+                    "Aucun écrêtage n'a été appliqué : Kpendjal a réellement "
+                    "2 155 habitants par point. La variante « rangs », insensible "
+                    "aux valeurs extrêmes, donne 0,953 — les extrêmes ne pilotent "
+                    "donc pas le classement."), unsafe_allow_html=True)
 
     with g2:
         with T.bloc(
@@ -128,20 +184,6 @@ def afficher(ctx: dict) -> None:
                                xaxis_title=None, yaxis_title=None,
                                margin=dict(l=4, r=44, t=6, b=24))
             st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
-
-    with d2:
-        with T.bloc("Variantes méthodologiques"):
-            t = variantes.copy()
-            t.columns = ["Variante", "Corrélation", "Top 10"]
-            t["Top 10"] = t["Top 10"].map(lambda v: f"{v}/10")
-            st.dataframe(t.style.format({"Corrélation": "{:.3f}"}, thousands=" ", decimal=","),
-                         width="stretch", hide_index=True, height=352)
-            st.markdown(
-                T.lecture(
-                    "Aucun écrêtage n'a été appliqué : Kpendjal a réellement "
-                    "2 155 habitants par point. La variante « rangs », insensible "
-                    "aux valeurs extrêmes, donne 0,953 — les extrêmes ne pilotent "
-                    "donc pas le classement."), unsafe_allow_html=True)
 
     # ===================================================== fiche territoire
     st.markdown("")
@@ -199,6 +241,11 @@ def afficher(ctx: dict) -> None:
                                legend=dict(orientation="h", y=-0.42,
                                            font=dict(size=10.5)))
             st.plotly_chart(fig3, width="stretch", config={"displayModeBar": False})
+            dominante = max(contribs, key=lambda c: c[1])
+            st.markdown(T.conclusion(
+                f"Premier facteur : {dominante[0]}, "
+                f"{dominante[1] / total:.0%} du score.".replace("%", " %")),
+                unsafe_allow_html=True)
             if len(f):
                 fr = f.iloc[0]
                 st.markdown(T.lecture(
@@ -208,13 +255,21 @@ def afficher(ctx: dict) -> None:
                     unsafe_allow_html=True)
 
     with d3:
-        with T.bloc(f"Communes de {choix}"):
-            sous = com[com.prefecture == choix].sort_values("DCPI", ascending=False)
+        sous = com[com.prefecture == choix].sort_values("DCPI", ascending=False)
+        classees = sous.dropna(subset=["rang_DCPI"])
+        if len(classees):
+            pire_com = classees.iloc[0]
+            st.markdown(T.conclusion(
+                f"{choix} compte {len(sous)} commune{'s' if len(sous) > 1 else ''}. "
+                f"La plus prioritaire est {pire_com.commune} "
+                f"({int(pire_com.rang_DCPI)}ᵉ sur 117)."), unsafe_allow_html=True)
+        with st.expander(f"Communes de {choix} (tableau détaillé)",
+                         expanded=False):
             t = sous[["rang_DCPI", "commune", "population", "points_mm",
                       "hab_par_point_mm", "agences_actives", "dist_agence_km",
                       "DCPI"]].copy()
             t.columns = ["Rang", "Commune", "Population", "Points MM",
-                         "Hab./point", "Agences", "Dist. (km)", "DCPI"]
+                         "Hab./point", "Agences actives", "Dist. (km)", "DCPI"]
             st.dataframe(t.style.format({
                 "Population": "{:,.0f}", "Points MM": "{:,.0f}",
                 "Hab./point": "{:,.0f}", "Dist. (km)": "{:,.0f}",

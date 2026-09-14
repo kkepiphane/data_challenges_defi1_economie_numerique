@@ -189,11 +189,13 @@ def main() -> None:
             icon=":material/info:")
     PAGES[st.session_state.page](ctx)
 
+    ok, total = D.nombre_controles()
     st.markdown(T.pied(
-        "3 sources · 39 préfectures · 117 communes · infrastructures "
-        "2021-2022, population 2022, contours 2021 · 25 contrôles "
-        "arithmétiques au vert · aucune valeur n'est imputée : une donnée "
-        "manquante est déclarée manquante."), unsafe_allow_html=True)
+        "3 sources · 39 préfectures · 117 communes · "
+        f"{D.libelle_agences()} · infrastructures 2021-2022, population 2022, "
+        f"contours 2021 · {ok} contrôles arithmétiques sur {total} au vert · "
+        "aucune valeur n'est imputée : une donnée manquante est déclarée "
+        "manquante."), unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

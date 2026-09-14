@@ -42,6 +42,9 @@ def afficher(ctx: dict) -> None:
     g, d = st.columns([1, 1.42], gap="medium")
 
     agence_de = ("d'opérateur" if ctx["operateur"] == "Tous" else op)
+    reperes = D.agences_reperes()
+    rec = (reperes["recensees"] if ctx["operateur"] == "Tous"
+           else reperes[f"recensees_{ctx['operateur'].lower()}"])
     with g:
         st.markdown(
             f'<div class="carte" style="padding:1.5rem 1.6rem 1.6rem 1.6rem">'
@@ -84,10 +87,10 @@ def afficher(ctx: dict) -> None:
          "tous géolocalisés, dans les 117 communes" if ctx["operateur"] == "Tous"
          else f"où {op} est présent · un point partagé compte pour chacun",
          T.VERT),
-        ("Agences d'opérateur actives", f"{int(pref.agences_actives.sum())}", "",
-         "2 opérateurs — Moov et Togocom" if ctx["operateur"] == "Tous"
-         else f"agences {op} uniquement", T.SERIE_1),
-        ("Préfectures sans aucune agence", f"{len(sans_agence)}", "/ 39",
+        ("Agences actives", f"{int(pref.agences_actives.sum())}", "",
+         f"sur {rec} recensées après dédoublonnage · {rec - int(pref.agences_actives.sum())} "
+         "fermée(s) exclue(s)", T.SERIE_1),
+        ("Préfectures sans agence active", f"{len(sans_agence)}", "/ 39",
          f"{int(sans_agence.population.sum()):,} habitants".replace(",", " ")
          + ("" if ctx["operateur"] == "Tous" else f" · agence {op}"),
          T.STATUT["critique"]),
@@ -108,7 +111,7 @@ def afficher(ctx: dict) -> None:
                     f"<b>{int(r.population):,}</b> habitants &nbsp;·&nbsp; "
                     f"<b>{r.hab_par_point_mm:,.0f}</b> hab./point &nbsp;·&nbsp; "
                     f"<b>{int(r.agences_actives)}</b> agence"
-                    f"{'s' if r.agences_actives > 1 else ''} &nbsp;·&nbsp; "
+                    f"{'s actives' if r.agences_actives > 1 else ' active'} &nbsp;·&nbsp; "
                     f"agence la plus proche à <b>{r.dist_agence_med_canton_km:.0f} km</b>"
                 ).replace(",", " ")
                 st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),

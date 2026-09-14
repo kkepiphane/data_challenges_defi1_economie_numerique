@@ -287,6 +287,26 @@ def _verifier(dossier: Path) -> list[tuple[str, bool, str]]:
     except Exception as e:                      # pragma: no cover
         controles.append(("Repondération de référence = DCPI publié", False,
                           f"{type(e).__name__}: {e}"[:120]))
+
+    # COHERENCE — le support et le tableau de bord citent les MEMES nombres.
+    # Deux lectures independantes des memes sources doivent concorder, sinon
+    # un jury lit 25 d'un cote et 35 de l'autre.
+    try:
+        import pandas as pd
+        import data as _D
+        sys.path.insert(0, str(ROOT / "src"))
+        import build_deck as _Deck
+        ag = _D.agences_reperes()
+        etab = pd.read_csv(ROOT / "data" / "processed" / "etablissements.csv")
+        agences = etab[etab.type_infrastructure != "Data center"]
+        app = (ag["recensees"], ag["actives"], _D.nombre_controles()[1])
+        deck = (len(agences), int(agences.actif.sum()), _Deck._controles()[1])
+        controles.append(("Agences et contrôles : support = tableau de bord",
+                          app == deck,
+                          f"recensées/actives/contrôles : app {app} · support {deck}"))
+    except Exception as e:                      # pragma: no cover
+        controles.append(("Agences et contrôles : support = tableau de bord",
+                          False, f"{type(e).__name__}: {e}"[:120]))
     return controles
 
 

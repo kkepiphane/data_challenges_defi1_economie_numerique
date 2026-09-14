@@ -17,12 +17,12 @@ declaree valide.
 | Archive sous 10 Mo | OK | 0.6 Mo |
 | Page « Vue d'ensemble » | OK | 26 blocs, 0 tables |
 | Page « Infrastructures » | OK | 30 blocs, 1 tables |
-| Page « Desserte & population » | OK | 35 blocs, 2 tables |
-| Page « Territoires prioritaires » | OK | 32 blocs, 2 tables |
-| Page « Couverture & zones blanches » | OK | 37 blocs, 2 tables |
+| Page « Desserte & population » | OK | 39 blocs, 2 tables |
+| Page « Territoires prioritaires » | OK | 36 blocs, 2 tables |
+| Page « Couverture & zones blanches » | OK | 36 blocs, 2 tables |
 | Page « Arbitrage » | OK | 31 blocs, 2 tables |
-| Page « Plan d'action » | OK | 37 blocs, 1 tables |
-| Page « Méthode & limites » | OK | 30 blocs, 2 tables |
+| Page « Plan d'action » | OK | 38 blocs, 1 tables |
+| Page « Méthode & limites » | OK | 28 blocs, 2 tables |
 | Feuille de style réémise à chaque rendu | OK | 4 rendus successifs : [True, True, True, True] |
 | Feuille de style conservée après navigation | OK | clic sur « Arbitrage » dans la navigation |
 | Aucun sélecteur large n'écrase la fonte des icônes | OK | fonte symbole préservée |
@@ -30,3 +30,4 @@ declaree valide.
 | Le sommaire refermé reste réouvrable | OK | « Deploy » masqué seul, bouton de réouverture conservé |
 | Départs rapides de pondération sans exception | OK | 4 préréglages appliqués |
 | Repondération de référence = DCPI publié | OK | écart max 7.11e-15 · corrélation des rangs 1.0000 |
+| Agences et contrôles : support = tableau de bord | OK | recensées/actives/contrôles : app (90, 88, 35) · support (90, 88, 35) |

@@ -341,6 +341,42 @@ CSS = f"""
   }}
   .action b {{ color: {VERT_SOMBRE}; font-weight: 650; }}
 
+  /* A RETENIR — les trois ou quatre messages d'une page, lisibles sans
+     defiler. Filet d'encre et numeros : un sommaire de conclusions, pas un
+     second bandeau d'action. */
+  .retenir {{
+      border-top: 2px solid {ENCRE}; border-bottom: 1px solid {FILET};
+      padding: 0.75rem 0 0.9rem 0; margin: 0.2rem 0 0.4rem 0;
+  }}
+  .retenir .titre {{
+      font-size: 0.665rem; letter-spacing: 0.11em; text-transform: uppercase;
+      color: {ENCRE_MUET}; font-weight: 600; margin-bottom: 0.55rem;
+  }}
+  .retenir ol {{
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      gap: 0.4rem 1.6rem; margin: 0; padding: 0; list-style: none;
+      counter-reset: msg;
+  }}
+  .retenir li {{
+      counter-increment: msg; font-family: {SERIF}; font-size: 0.97rem;
+      color: {ENCRE}; line-height: 1.5; padding-left: 1.7rem; position: relative;
+  }}
+  .retenir li::before {{
+      content: counter(msg); position: absolute; left: 0; top: 0.1rem;
+      font-family: {SANS}; font-size: 0.72rem; font-weight: 650;
+      color: {VERT}; border: 1.5px solid {VERT}; border-radius: 50%;
+      width: 1.2rem; height: 1.2rem; display: flex; align-items: center;
+      justify-content: center; {CHIFFRES}
+  }}
+  .retenir li b {{ font-weight: 650; }}
+
+  /* Conclusion sous un graphique : ce que le lecteur doit en tirer. */
+  .conclusion {{
+      font-family: {SERIF}; font-size: 0.95rem; font-weight: 600;
+      color: {ENCRE}; line-height: 1.5; margin: 0.35rem 0 0.2rem 0;
+  }}
+  .conclusion::before {{ content: "→ "; color: {VERT}; }}
+
   /* Rangee de priorite */
   .prio {{
       border-bottom: 1px solid {FILET}; padding: 0.85rem 0.2rem;
@@ -647,6 +683,18 @@ def source(texte: str) -> str:
 
 def action(texte: str) -> str:
     return f'<div class="{MARQUEUR} action">{texte}</div>'
+
+
+def a_retenir(messages: list[str]) -> str:
+    """Les messages essentiels d'une page, en tete, avant tout graphique."""
+    items = "".join(f"<li>{m}</li>" for m in messages)
+    return (f'<div class="{MARQUEUR} retenir"><div class="titre">À retenir</div>'
+            f'<ol>{items}</ol></div>')
+
+
+def conclusion(texte: str) -> str:
+    """Phrase de conclusion, visible sous un graphique."""
+    return f'<div class="{MARQUEUR} conclusion">{texte}</div>'
 
 
 def pied(texte: str) -> str:

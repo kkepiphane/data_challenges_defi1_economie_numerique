@@ -310,7 +310,7 @@ def afficher(ctx: dict) -> None:
                    "dist_agence_med_canton_km", "DCPI_perso"]].copy()
     detail.columns = ["Rang", "Préfecture", "Région", "Population",
                       "Hab./point", "Points existants", "Points cibles",
-                      "Points à ouvrir", "Agences", "Dist. méd. (km)", "Score"]
+                      "Points à ouvrir", "Agences actives", "Dist. méd. (km)", "Score"]
     with T.bloc("Plan de couverture, territoire par territoire"):
         st.dataframe(detail.style.format({
             "Population": "{:,.0f}", "Hab./point": "{:,.0f}",
