@@ -248,11 +248,12 @@ CSS = f"""
       background: {PAPIER}; border-right: 1px solid {FILET};
       /* 319px : largeur testee et retenue directement dans le navigateur
          (inspecteur), plus confortable que le defaut Streamlit pour les
-         libelles de filtre et les intitules de page. Pas de !important —
-         Streamlit pose sa propre largeur en style inline des que
-         l'utilisateur redimensionne a la souris ; cette regle ne fixe que
-         le POINT DE DEPART, jamais verrouille. */
-      width: 319px;
+         libelles de filtre et les intitules de page. !important, DELIBERE :
+         sans lui, Streamlit reimpose sa propre largeur par-dessus au rendu
+         (style inline de son composant de redimensionnement). Consequence
+         assumee : la barre laterale n'est plus redimensionnable a la
+         souris, largeur fixe partout et pour tous. */
+      width: 319px !important;
   }}
   section[data-testid="stSidebar"] > div {{ padding: 1.5rem 1.1rem 1.5rem 1.4rem; }}
 
