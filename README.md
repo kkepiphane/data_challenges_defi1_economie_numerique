@@ -15,7 +15,7 @@ masque un rapport de **1 à 12,7** entre préfectures.
 
 | | Constat mesuré |
 |---|---|
-| **90 agences** d'opérateur | et non 141 : le jeu « Agences – Télécom » est un doublon intégral de Moov ∪ Togocom |
+| **90 agences recensées** après dédoublonnage (28 Moov, 62 Togocom), **dont 88 actives** | et non 141 : le jeu « Agences – Télécom » est un doublon intégral de Moov ∪ Togocom ; 2 agences Togocom sont déclarées fermées |
 | **2 opérateurs**, pas 4 | CANAL+ est vide à la source ; « Télécom » n'est pas un opérateur |
 | **13 préfectures sur 39** | sans aucune agence active — 20 % de la population |
 | **75 communes sur 117** | sans aucune agence active |
@@ -48,6 +48,7 @@ python src/build_geo.py          # contours, superficies, densités
 python src/build_indicators.py   # déduplication, ratios par habitant
 python src/spatial_access.py     # distances (reprojection EPSG:32631)
 python src/priority_index.py     # indice DCPI + analyse de sensibilité
+python src/zones_blanches.py      # zones à risque de zone blanche (proxy par canton)
 python src/build_app_data.py     # paquet léger lu par l'application
 python src/build_deck_figures.py # visuels du support
 python src/build_deck.py         # support de présentation, 10 diapositives
@@ -56,7 +57,7 @@ python src/build_livrable.py     # archive .zip du tableau de bord, vérifiée
 ```
 
 Chaque script écrit son propre rapport de contrôle dans `reports/`.
-**25 contrôles arithmétiques** sont rejoués à chaque exécution.
+**35 contrôles arithmétiques** sont rejoués à chaque exécution.
 
 ### Deux fichiers de dépendances, et c'est délibéré
 
@@ -90,7 +91,7 @@ retoucher une seule diapositive — page de garde comprise.
 
 `src/build_livrable.py` ne se contente pas de zipper des fichiers. Il extrait
 l'archive **hors du projet**, dans un répertoire temporaire, et y exécute les
-sept pages du tableau de bord avec le harnais de test de Streamlit. Un fichier
+huit pages du tableau de bord avec le harnais de test de Streamlit. Un fichier
 oublié, un chemin absolu, un import qui ne tenait que sur ce poste : l'étape
 échoue et l'archive n'est pas publiée.
 
@@ -192,14 +193,21 @@ data/interim/      extractions intermédiaires
 data/processed/    datasets analytiques finaux, dont les 10 fichiers
                    lus par l'application — ceux-là sont versionnés
 src/               chaîne de traitement, un script par étape
-dashboard/         application Streamlit (lecture seule), 7 pages
+dashboard/         application Streamlit (lecture seule), 8 pages
 reports/           rapports de contrôle, support, aperçus, livrable
 ```
 
-## Les sept pages du tableau de bord
+## Les huit pages du tableau de bord
 
 La navigation suit l'**intention du lecteur**, pas la structure des données :
-établir le diagnostic, puis décider.
+établir le diagnostic, puis décider. Chaque page s'ouvre sur un bloc « À retenir »
+de trois ou quatre messages ; les graphiques portent une phrase de conclusion,
+et les tableaux détaillés sont repliés après eux.
+
+Un filtre **Opérateur** (Tous, Moov, Togocom) complète les filtres Région et
+Préfecture. Les comptes d'agences suivent une seule définition partout : **90
+recensées après dédoublonnage** (28 Moov, 62 Togocom), **dont 88 actives** — les
+2 agences Togocom déclarées fermées sont exclues des calculs d'accès.
 
 L'interface est composée comme un **document**, pas comme une console : fond
 crème, titres en romain à empattements (Spectral), filets là où l'on mettrait
@@ -213,6 +221,7 @@ une colonne de valeurs doit s'aligner.
 | Diagnostic | **Infrastructures** | agences, agents Mobile Money, centres de données — après déduplication |
 | | **Desserte & population** | ratios par habitant, concentration, écarts entre préfectures |
 | | **Territoires prioritaires** | l'indice DCPI, sa composition, sa robustesse, une fiche par territoire |
+| | **Couverture & zones blanches** | la donnée absente, les sources cherchées, un proxy déclaré et les cantons à investiguer |
 | Décider | **Arbitrage** | réglez vous-même les pondérations ; convertissez un objectif de desserte en points à ouvrir ; exportez |
 | | **Plan d'action** | quelles interventions les déficits mesurés appellent, et où |
 | | **Méthode & limites** | sources, contrôles, pistes écartées, limites à connaître avant de citer |

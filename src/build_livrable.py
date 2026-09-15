@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "reports" / "tableau_de_bord_togo.zip"
 RACINE_ARCHIVE = "tableau_de_bord_togo"
 
-# Les dix fichiers lus par l'application. La liste est EXPLICITE : embarquer
+# Les quinze fichiers lus par l'application. La liste est EXPLICITE : embarquer
 # `data/processed/*` entrainerait les 5 Mo de la table WKT d'origine, que
 # l'application n'ouvre jamais.
 DONNEES = [
@@ -51,6 +51,8 @@ DONNEES = [
     "dcpi_prefecture.csv", "dcpi_sensibilite.csv", "dcpi_variantes.csv",
     "etablissements_pts.csv", "indicateurs_commune.csv",
     "points_mobile_money.csv", "prefectures.geojson",
+    "zones_blanches_canton.csv", "zones_blanches_variantes.csv",
+    "cantons.geojson", "vide_temoins.csv", "acces_operateur_prefecture.csv",
 ]
 
 # Les sept pages, lues telles que l'application les nomme. La liste n'est pas
@@ -80,11 +82,11 @@ suffisent : ni compilation, ni outil système, ni base de données.
 
 | Dossier | Contenu |
 |---|---|
-| `dashboard/` | l'application : 7 pages, cartes, fiches de territoire |
-| `data/processed/` | les 10 fichiers lus par l'application |
+| `dashboard/` | l'application : 8 pages, cartes, fiches de territoire |
+| `data/processed/` | les 15 fichiers lus par l'application |
 | `reports/` | un rapport de contrôle par étape de la chaîne d'analyse |
 
-## Les sept pages
+## Les huit pages
 
 | Page | Ce qu'on y trouve |
 |---|---|
@@ -92,6 +94,7 @@ suffisent : ni compilation, ni outil système, ni base de données.
 | **Infrastructures** | agences, agents Mobile Money, centres de données — après déduplication |
 | **Desserte & population** | ratios par habitant, concentration, écarts entre préfectures |
 | **Territoires prioritaires** | l'indice DCPI, sa composition, sa robustesse, une fiche par territoire |
+| **Couverture & zones blanches** | la donnée de couverture absente, les sources cherchées, un proxy déclaré comme tel et la carte des cantons à investiguer |
 | **Arbitrage** | réglez vous-même les pondérations, puis convertissez un objectif de desserte en nombre de points à ouvrir |
 | **Plan d'action** | quelles interventions les déficits mesurés appellent, et sur quels territoires |
 | **Méthode & limites** | sources, contrôles arithmétiques, pistes écartées, limites à connaître avant de citer les résultats |
@@ -103,8 +106,9 @@ dans aucune source du projet. Un score élevé signale un besoin mesuré — pas
 solution, et pas un budget.
 
 Il ne mesure **pas la couverture réseau mobile** : aucune des 19 variables des
-fichiers sources ne la décrit. Une zone sans agence n'est pas nécessairement
-une zone sans réseau.
+fichiers sources ne la décrit. La page « Couverture & zones blanches » désigne
+des cantons à investiguer à partir d'un proxy déclaré — une zone sans agent
+Mobile Money n'est pas nécessairement une zone sans réseau.
 
 ## Sources
 
@@ -283,6 +287,59 @@ def _verifier(dossier: Path) -> list[tuple[str, bool, str]]:
     except Exception as e:                      # pragma: no cover
         controles.append(("Repondération de référence = DCPI publié", False,
                           f"{type(e).__name__}: {e}"[:120]))
+
+    # COHERENCE — le support et le tableau de bord citent les MEMES nombres.
+    # Deux lectures independantes des memes sources doivent concorder, sinon
+    # un jury lit 25 d'un cote et 35 de l'autre.
+    try:
+        import pandas as pd
+        import data as _D
+        sys.path.insert(0, str(ROOT / "src"))
+        import build_deck as _Deck
+        ag = _D.agences_reperes()
+        etab = pd.read_csv(ROOT / "data" / "processed" / "etablissements.csv")
+        agences = etab[etab.type_infrastructure != "Data center"]
+        app = (ag["recensees"], ag["actives"], _D.nombre_controles()[1])
+        deck = (len(agences), int(agences.actif.sum()), _Deck._controles()[1])
+        controles.append(("Agences et contrôles : support = tableau de bord",
+                          app == deck,
+                          f"recensées/actives/contrôles : app {app} · support {deck}"))
+    except Exception as e:                      # pragma: no cover
+        controles.append(("Agences et contrôles : support = tableau de bord",
+                          False, f"{type(e).__name__}: {e}"[:120]))
+
+    # COHERENCE — le total de "points a ouvrir" doit etre IDENTIQUE sur
+    # Arbitrage (poids de reference, objectif par defaut, les 9 premiers du
+    # classement), Plan d'action (les 9 territoires robustes — le meme
+    # ensemble, verifie ailleurs) et le support. Une seule fonction partagee
+    # (`data.plan_couverture`) alimente les deux pages ; ce controle detecte
+    # si l'une d'elles s'en ecartait un jour.
+    try:
+        import numpy as np
+        import pandas as pd
+        import data as _D
+        pref = _D.prefectures()
+        sens = pd.read_csv(_D.PROCESSED / "dcpi_sensibilite.csv")
+        stables = set(sens[sens.frequence_top10 >= 0.90].prefecture)
+        top9 = set(pref.nsmallest(9, "rang_DCPI").prefecture)
+        prio = pref[pref.prefecture.isin(stables)]
+        # `data.plan_couverture` (utilisee par Arbitrage et Plan d'action) vs
+        # la meme formule recalculee independamment (celle du support) :
+        # les deux DOIVENT concorder.
+        via_fonction = int(_D.plan_couverture(prio, _D.OBJECTIF_DEFAUT)
+                          .points_a_ouvrir.sum())
+        via_formule = int((np.ceil(prio.population / _D.OBJECTIF_DEFAUT)
+                          - prio.points_mm).clip(lower=0).sum())
+        controles.append((
+            "Points à ouvrir : Arbitrage = Plan d'action = support",
+            stables == top9 and via_fonction == via_formule,
+            f"{via_fonction} points pour les {len(stables)} territoires "
+            f"robustes (= top {len(top9)} du classement DCPI : "
+            f"{stables == top9})"))
+    except Exception as e:                      # pragma: no cover
+        controles.append((
+            "Points à ouvrir : Arbitrage = Plan d'action = support",
+            False, f"{type(e).__name__}: {e}"[:120]))
     return controles
 
 
@@ -310,7 +367,7 @@ def main() -> None:
         corrompu = z.testzip()
         controles.append(("Archive lisible et sans entrée corrompue",
                           corrompu is None, corrompu or "intégrité vérifiée"))
-        controles.append(("Les 10 fichiers de données sont présents",
+        controles.append((f"Les {len(DONNEES)} fichiers de données sont présents",
                           all(f"{RACINE_ARCHIVE}/data/processed/{n}" in noms
                               for n in DONNEES), f"{len(DONNEES)} fichiers"))
         controles.append(("Notice et dépendances embarquées",

@@ -47,6 +47,36 @@ import plotly.io as pio
 import streamlit as st
 
 # =============================================================================
+# FORMATAGE DES NOMBRES — notation francaise, PARTOUT
+# =============================================================================
+# Python formate "12.7" et "20%" par defaut : virgule et espace anglo-saxons.
+# Deux fonctions, appelees partout ou un nombre est ecrit dans un texte, pour
+# qu'aucune page ne mette a nu le formatage par defaut de Python.
+def fr(x: float, dec: int = 1) -> str:
+    """Nombre en notation francaise : virgule decimale, espace pour les
+    milliers. `fr(1234.5, 1)` -> "1 234,5" ; `fr(409, 0)` -> "409". Espace
+    ASCII ordinaire — pas une espace insecable — pour rester coherent avec le
+    reste du code (`.replace(",", " ")`, deja partout ailleurs)."""
+    entier, _, decimales = f"{x:,.{dec}f}".partition(".")
+    entier = entier.replace(",", " ")
+    return entier if dec == 0 else f"{entier},{decimales}"
+
+
+def pct(x: float, dec: int = 0) -> str:
+    """Pourcentage en notation francaise : espace avant le signe %.
+    `pct(0.271, 0)` -> "27 %" ; l'entree est une FRACTION (0-1)."""
+    return f"{fr(x * 100, dec)} %"
+
+
+def ordinal(n: int) -> str:
+    """Ordinal francais : « 1er » pour 1, « 2ᵉ », « 3ᵉ »... au-dela (« ᵉ » en
+    exposant, deja l'usage du reste du tableau de bord). Le francais n'a pas
+    la meme forme pour le premier rang que pour les suivants — « 1ᵉ » seul
+    n'existe pas."""
+    return "1er" if n == 1 else f"{n}ᵉ"
+
+
+# =============================================================================
 # PAPIER ET ENCRE
 # =============================================================================
 # Le fond n'est pas blanc mais CREME. Un blanc pur sur un ecran lumineux fatigue
@@ -216,6 +246,14 @@ CSS = f"""
      marge de document. */
   section[data-testid="stSidebar"] {{
       background: {PAPIER}; border-right: 1px solid {FILET};
+      /* 319px : largeur testee et retenue directement dans le navigateur
+         (inspecteur), plus confortable que le defaut Streamlit pour les
+         libelles de filtre et les intitules de page. !important, DELIBERE :
+         sans lui, Streamlit reimpose sa propre largeur par-dessus au rendu
+         (style inline de son composant de redimensionnement). Consequence
+         assumee : la barre laterale n'est plus redimensionnable a la
+         souris, largeur fixe partout et pour tous. */
+      width: 319px !important;
   }}
   section[data-testid="stSidebar"] > div {{ padding: 1.5rem 1.1rem 1.5rem 1.4rem; }}
 
@@ -340,6 +378,42 @@ CSS = f"""
       line-height: 1.65;
   }}
   .action b {{ color: {VERT_SOMBRE}; font-weight: 650; }}
+
+  /* A RETENIR — les trois ou quatre messages d'une page, lisibles sans
+     defiler. Filet d'encre et numeros : un sommaire de conclusions, pas un
+     second bandeau d'action. */
+  .retenir {{
+      border-top: 2px solid {ENCRE}; border-bottom: 1px solid {FILET};
+      padding: 0.75rem 0 0.9rem 0; margin: 0.2rem 0 0.4rem 0;
+  }}
+  .retenir .titre {{
+      font-size: 0.665rem; letter-spacing: 0.11em; text-transform: uppercase;
+      color: {ENCRE_MUET}; font-weight: 600; margin-bottom: 0.55rem;
+  }}
+  .retenir ol {{
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      gap: 0.4rem 1.6rem; margin: 0; padding: 0; list-style: none;
+      counter-reset: msg;
+  }}
+  .retenir li {{
+      counter-increment: msg; font-family: {SERIF}; font-size: 0.97rem;
+      color: {ENCRE}; line-height: 1.5; padding-left: 1.7rem; position: relative;
+  }}
+  .retenir li::before {{
+      content: counter(msg); position: absolute; left: 0; top: 0.1rem;
+      font-family: {SANS}; font-size: 0.72rem; font-weight: 650;
+      color: {VERT}; border: 1.5px solid {VERT}; border-radius: 50%;
+      width: 1.2rem; height: 1.2rem; display: flex; align-items: center;
+      justify-content: center; {CHIFFRES}
+  }}
+  .retenir li b {{ font-weight: 650; }}
+
+  /* Conclusion sous un graphique : ce que le lecteur doit en tirer. */
+  .conclusion {{
+      font-family: {SERIF}; font-size: 0.95rem; font-weight: 600;
+      color: {ENCRE}; line-height: 1.5; margin: 0.35rem 0 0.2rem 0;
+  }}
+  .conclusion::before {{ content: "→ "; color: {VERT}; }}
 
   /* Rangee de priorite */
   .prio {{
@@ -647,6 +721,18 @@ def source(texte: str) -> str:
 
 def action(texte: str) -> str:
     return f'<div class="{MARQUEUR} action">{texte}</div>'
+
+
+def a_retenir(messages: list[str]) -> str:
+    """Les messages essentiels d'une page, en tete, avant tout graphique."""
+    items = "".join(f"<li>{m}</li>" for m in messages)
+    return (f'<div class="{MARQUEUR} retenir"><div class="titre">À retenir</div>'
+            f'<ol>{items}</ol></div>')
+
+
+def conclusion(texte: str) -> str:
+    """Phrase de conclusion, visible sous un graphique."""
+    return f'<div class="{MARQUEUR} conclusion">{texte}</div>'
 
 
 def pied(texte: str) -> str:

@@ -40,8 +40,10 @@ LIMITES = [
      "Aucune donnée de couverture radio n'existe dans les sources ouvertes "
      "mobilisées, et les couches d'antennes du catalogue national ne sont pas "
      "publiques. **L'objectif « identifier les zones blanches » n'est donc pas "
-     "traité comme tel.** Ce qui est mesuré est un déficit d'accès aux "
-     "services : *une zone sans agence ni agent Mobile Money n'est pas "
+     "mesurable avec les données ouvertes disponibles** : il est traité comme "
+     "une limite critique et un besoin prioritaire de données. La page "
+     "« Couverture & zones blanches » désigne des cantons **à investiguer** à "
+     "partir d'un proxy déclaré comme tel : *une zone sans agence ni agent Mobile Money n'est pas "
      "nécessairement une zone sans réseau mobile.* C'est la limite la plus "
      "importante de ce travail.",
      T.STATUT["critique"]),
@@ -102,15 +104,28 @@ ECARTEES = [
 
 def afficher(ctx: dict) -> None:
     st.markdown(T.bandeau(
-        "Décision · 07", "Méthode & limites",
+        "Décision · 08", "Méthode & limites",
         "D'où viennent ces chiffres, jusqu'où peut-on s'y fier, et que ne "
         "disent-ils pas ?"), unsafe_allow_html=True)
 
     ctrl = D.controles_chaine()
-    ok = int(ctrl.Resultat.str.contains("OK").sum()) if len(ctrl) else 0
+    ok, total = D.nombre_controles()
+    ag = D.agences_reperes()
+
+    st.markdown(T.a_retenir([
+        f"<b>{ok} contrôles arithmétiques sur {total}</b> au vert, rejoués à "
+        "chaque exécution de la chaîne d'analyse.",
+        "<b>Aucune valeur imputée</b> : la population somme exactement à "
+        "8 095 498 habitants aux trois niveaux administratifs.",
+        f"<b>{ag['recensees']} agences recensées après dédoublonnage</b> (et "
+        f"non 141), dont <b>{ag['actives']} actives</b> : « Télécom » est un "
+        "doublon, CANAL+ est vide à la source.",
+        "<b>Limite critique</b> : la couverture réseau mobile n'est pas "
+        "mesurable avec les données ouvertes disponibles.",
+    ]), unsafe_allow_html=True)
 
     k = st.columns(4, gap="small")
-    k[0].markdown(T.kpi("Contrôles arithmétiques", f"{ok}", f"/ {len(ctrl)}",
+    k[0].markdown(T.kpi("Contrôles arithmétiques", f"{ok}", f"/ {total}",
                         "rejoués à chaque exécution de la chaîne",
                         T.STATUT["bon"]), unsafe_allow_html=True)
     k[1].markdown(T.kpi("Population — somme vérifiée", "8 095 498", "",
@@ -123,17 +138,10 @@ def afficher(ctx: dict) -> None:
                         "des points tombent dans la préfecture déclarée",
                         T.STATUT["bon"]), unsafe_allow_html=True)
 
-    # ------------------------------------------------------------- sources
-    st.markdown("")
-    st.markdown(T.etiquette("D'où viennent les données", "1.1rem"),
-                unsafe_allow_html=True)
-    st.dataframe(SOURCES, width="stretch", hide_index=True)
-
     # ------------------------------------------------------------ confiance
     st.markdown(T.etiquette("Pourquoi s'y fier", "1.4rem"),
                 unsafe_allow_html=True)
     g, d = st.columns([1, 1], gap="medium")
-
     with g:
         st.markdown(
             T.action(
@@ -141,47 +149,53 @@ def afficher(ctx: dict) -> None:
                 "évité des erreurs graves.<br><br>"
                 "① Une jointure sur des noms accentués faisait tomber "
                 "<b>neuf préfectures à zéro point Mobile Money</b> — dont "
-                "Agoè-Nyivé et ses 882 695 habitants. Le tableau de bord "
-                "aurait affiché la deuxième préfecture du pays comme un "
-                "désert numérique total.<br><br>"
+                "Agoè-Nyivé et ses 882 695 habitants.<br><br>"
                 "② Une somme régionale à 11 630 489 habitants a révélé un "
                 "double comptage du Grand Lomé, corrigé à la source."),
             unsafe_allow_html=True)
-        st.markdown("")
+    with d:
+        st.markdown(T.conclusion(
+            f"Les {ag['fermees']} agences d'écart entre recensées et actives "
+            "sont déclarées fermées dans la source : "
+            f"{D.liste_fr(ag['fermees_detail'])}. Elles figurent dans le "
+            "recensement, jamais dans les calculs d'accès."),
+            unsafe_allow_html=True)
+        st.markdown(T.lecture(
+            "« Télécom » n'est pas un quatrième opérateur : ses 51 lignes sont "
+            "toutes contenues dans les fichiers Moov et Togocom. Empiler les "
+            "fichiers aurait affiché 141 agences au lieu de "
+            f"{ag['recensees']}."), unsafe_allow_html=True)
+
+    # Le detail sert a verifier : il vient replie, apres les messages.
+    with st.expander(f"Les {total} contrôles, étape par étape"):
+        if len(ctrl):
+            st.dataframe(ctrl[["Etape", "Controle", "Resultat", "Detail"]].rename(
+                columns={"Etape": "Étape", "Controle": "Contrôle",
+                         "Resultat": "Résultat", "Detail": "Détail"}),
+                width="stretch", hide_index=True, height=420)
+    with st.expander("D'où viennent les données — trois sources publiques"):
+        st.dataframe(SOURCES, width="stretch", hide_index=True)
+    with st.expander("Ce qui a été testé puis écarté — trois pistes"):
         st.markdown(
             T.lecture(
-                "Deux constats des données <b>corrigent l'énoncé du défi</b> : "
-                "« Télécom » n'est pas un quatrième opérateur mais un doublon "
-                "intégral de Moov et Togocom — d'où 90 agences et non 141 ; et "
-                "CANAL+ est vide à la source."), unsafe_allow_html=True)
-
-    with d:
-        if len(ctrl):
-            st.dataframe(ctrl[["Etape", "Controle", "Resultat"]].rename(
-                columns={"Etape": "Étape", "Controle": "Contrôle",
-                         "Resultat": "Résultat"}),
-                width="stretch", hide_index=True, height=396)
-
-    # ------------------------------------------------------------- écartées
-    st.markdown(T.etiquette("Ce qui a été testé puis écarté", "1.4rem"),
-                unsafe_allow_html=True)
-    st.markdown(
-        T.lecture(
-            "Une méthode n'est solide que si l'on sait ce qu'elle a refusé de "
-            "faire. Ces trois pistes ont été mises en œuvre ou évaluées, puis "
-            "abandonnées."), unsafe_allow_html=True)
-    cols = st.columns(3, gap="small")
-    for col, (titre, corps) in zip(cols, ECARTEES):
-        col.markdown(
-            f'<div class="carte" style="border-top:3px solid {T.GRIS_FOND}">'
-            f'<div style="font-size:0.92rem;font-weight:620;color:{T.ENCRE};'
-            f'line-height:1.35;margin-bottom:0.55rem">{titre}</div>'
-            f'<div style="font-size:0.8rem;color:{T.ENCRE_2};line-height:1.6">'
-            f'{corps}</div></div>', unsafe_allow_html=True)
+                "Une méthode n'est solide que si l'on sait ce qu'elle a refusé "
+                "de faire. Ces trois pistes ont été mises en œuvre ou évaluées, "
+                "puis abandonnées."), unsafe_allow_html=True)
+        cols = st.columns(3, gap="small")
+        for col, (titre, corps) in zip(cols, ECARTEES):
+            col.markdown(
+                f'<div class="carte" style="border-top:3px solid {T.GRIS_FOND}">'
+                f'<div style="font-size:0.92rem;font-weight:620;color:{T.ENCRE};'
+                f'line-height:1.35;margin-bottom:0.55rem">{titre}</div>'
+                f'<div style="font-size:0.8rem;color:{T.ENCRE_2};line-height:1.6">'
+                f'{corps}</div></div>', unsafe_allow_html=True)
 
     # -------------------------------------------------------------- limites
     st.markdown(T.etiquette("Ce que ces résultats ne disent pas", "1.4rem"),
                 unsafe_allow_html=True)
-    for titre, corps, coul in LIMITES:
-        with st.expander(titre):
+    # La limite critique reste depliee : c'est la seule qu'un lecteur ne
+    # doit pas pouvoir manquer.
+    for i, (titre, corps, coul) in enumerate(LIMITES):
+        with st.expander(("Limite critique — " if i == 0 else "") + titre,
+                         expanded=(i == 0)):
             st.markdown(corps)

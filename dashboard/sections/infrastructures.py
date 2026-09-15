@@ -12,6 +12,8 @@ Money servent donc de toile de fond grise, pas de quatrieme serie.
 
 from __future__ import annotations
 
+import re
+
 import streamlit as st
 
 import cartes
@@ -31,7 +33,7 @@ INDICATEURS = {
         "Nombre d'habitants pour un point de service. Plus la teinte est "
         "foncée, moins le territoire est desservi. Le Grand Lomé et les "
         "marges du pays s'opposent nettement."),
-    "Éloignement des agences": (
+    "Éloignement des agences actives": (
         "dist_agence_med_canton_km", "Distance médiane (km)", ",.0f",
         "À quelle distance est l'agence la plus proche ?",
         "Distance médiane depuis les cantons du territoire. Quatre "
@@ -43,17 +45,18 @@ INDICATEURS = {
         "De 42 habitants au km² à Mô jusqu'à 5 423 dans le Golfe, soit un "
         "rapport de 1 à 130. Une infrastructure absente n'a pas le même "
         "poids selon la densité qu'elle laisse sans service."),
-    "Agences par habitant": (
-        "agences_pour_100k_hab", "Agences / 100 000 hab.", ",.2f",
+    "Agences actives par habitant": (
+        "agences_pour_100k_hab", "Agences actives / 100 000 hab.", ",.2f",
         "L'offre est-elle proportionnée à la population ?",
         "Treize préfectures affichent zéro. Ce sont de vrais zéros : le "
         "référentiel administratif est complet, une absence de valeur "
-        "signifie bien une absence d'agence."),
+        "signifie bien une absence d'agence active."),
 }
 
 
 def afficher(ctx: dict) -> None:
-    pref = D.prefectures()
+    pref = D.prefectures_operateur(ctx["operateur"])
+    op = D.libelle_operateur(ctx)
     vue = pref[pref.prefecture.isin(ctx["prefectures"])]
     geo = D.geojson_prefectures()
     etab = D.etablissements()
@@ -69,17 +72,39 @@ def afficher(ctx: dict) -> None:
 
     with g:
         with T.bloc("Ce que la carte affiche"):
-            cats = ["Agence Moov", "Agence Togocom", "Data center"]
+            couleurs = dict(zip(["Agence Moov", "Agence Togocom", "Data center"],
+                                T.CATEGORIEL))
+            # Les centres de donnees n'appartiennent a aucun operateur : ils
+            # restent affiches quel que soit le filtre.
+            cats = [c for c in couleurs if ctx["operateur"] == "Tous"
+                    or c in (f"Agence {ctx['operateur']}", "Data center")]
             sel = st.multiselect("Type", cats, default=cats,
                                  label_visibility="collapsed")
-            fond = st.toggle("Fond des 19 788 points Mobile Money", value=True)
+            mm = D.mobile_money_operateur(ctx["operateur"])
+            fond = st.toggle(
+                f"Fond des {T.fr(len(mm), 0)} points Mobile Money"
+                + ("" if ctx["operateur"] == "Tous" else f" {op}"), value=True)
 
-        pts = etab_vue[etab_vue.categorie.isin(sel)]
+        # Meme definition que le reste de l'outil : la carte montre les
+        # agences ACTIVES ; les fermees forment une couche a part, grisee,
+        # pour que le total recense reste lisible sans etre confondu.
+        choisies = etab_vue[etab_vue.categorie.isin(sel)]
+        pts = choisies[choisies.actif]
+        fermees = choisies[~choisies.actif]
         st.markdown("")
-        for cat, coul in zip(cats, T.CATEGORIEL):
-            n = int((pts.categorie == cat).sum())
-            st.markdown(T.kpi(cat, f"{n}", "",
-                              "sur le territoire sélectionné", coul),
+        for cat in cats:
+            coul = couleurs[cat]
+            n_act = int((pts.categorie == cat).sum())
+            n_rec = int((etab_vue.categorie == cat).sum())
+            # Chaque KPI de ce bloc varie avec les filtres region/prefecture/
+            # operateur : la note le rappelle explicitement.
+            note = ("sur le territoire sélectionné" if cat == "Data center"
+                    else f"sur {n_rec} recensées après dédoublonnage, "
+                    "sur le territoire sélectionné")
+            libelle = ("Centres de données" if cat == "Data center"
+                       else cat.replace("Agence", "Agences") + " actives")
+            st.markdown(T.kpi(libelle,
+                              f"{n_act}", "", note, coul),
                         unsafe_allow_html=True)
             st.markdown("")
 
@@ -88,27 +113,39 @@ def afficher(ctx: dict) -> None:
                 "Implantation des équipements télécoms · limites régionales en "
                 "trait sombre, préfectorales en liseré blanc"):
             couches = []
-            for cat, coul in zip(cats, T.CATEGORIEL):
+            for cat in cats:
+                coul = couleurs[cat]
                 s = pts[pts.categorie == cat]
+                # Legende claire : "Agence Moov active", "Agence Togocom
+                # active", "Centre de données" — jamais l'intitule technique
+                # de categorie tel quel.
                 couches.append({
-                    "nom": cat, "couleur": coul,
+                    "nom": "Centre de données" if cat == "Data center"
+                    else f"{cat} active",
+                    "couleur": coul,
                     "lat": s.lat.tolist(), "lon": s.lon.tolist(),
                     "texte": [f"<b>{n}</b><br>{c}, {p}<br>"
                               f"<span style='color:#8b8a84'>{r}</span>"
                               for n, c, p, r in zip(s.etab_nom, s.commune,
                                                     s.prefecture, s.region)]})
-            mm = None
-            if fond:
-                mm = D.mobile_money()
-                mm = mm[mm.prefecture.isin(ctx["prefectures"])]
-            st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, mm),
+            if len(fermees):
+                couches.append({
+                    "nom": "Agence fermée (hors calculs)", "couleur": "#8a8579",
+                    "lat": fermees.lat.tolist(), "lon": fermees.lon.tolist(),
+                    "texte": [f"<b>{n}</b><br>{c}, {p}<br>Déclarée fermée "
+                              "dans la source — exclue des calculs"
+                              for n, c, p in zip(fermees.etab_nom,
+                                                 fermees.commune,
+                                                 fermees.prefecture)]})
+            fond_mm = mm[mm.prefecture.isin(ctx["prefectures"])] if fond else None
+            st.plotly_chart(cartes.carte_points(couches, geo, vue, 620, fond_mm),
                             width="stretch", config={"displayModeBar": False})
 
     st.markdown(
         T.action(
-            "<b>Les trois centres de données du pays sont dans la seule "
-            "préfecture du Golfe.</b> L'hébergement numérique national est "
-            "entièrement concentré à Lomé — aucune redondance géographique "
+            "<b>Les trois centres de données sont concentrés dans le Grand "
+            "Lomé, au sein de la préfecture du Golfe.</b> L'hébergement "
+            "numérique national ne dispose d'aucune redondance géographique "
             "hors de la capitale."), unsafe_allow_html=True)
 
     # ================================================ choroplèthe pilotée
@@ -120,16 +157,30 @@ def afficher(ctx: dict) -> None:
 
     g2, d2 = st.columns([3.1, 1], gap="medium")
     with g2:
-        with T.bloc(choix):
+        with T.bloc(f"{choix} · cliquez un territoire pour ouvrir sa fiche"):
             st.plotly_chart(
                 cartes.choroplethe(vue, geo, col, titre_ech, fmt, 600),
-                width="stretch", config={"displayModeBar": False})
+                width="stretch", key="carte_infra",
+                on_select=D.ouvrir_fiche(
+                    "carte_infra", vue.dropna(subset=[col]).prefecture.tolist(),
+                    True),
+                selection_mode="points", config={"displayModeBar": False})
     with d2:
         st.markdown(T.question(question), unsafe_allow_html=True)
         st.markdown(T.lecture(lecture), unsafe_allow_html=True)
+        if ctx["operateur"] != "Tous" and col != "densite_hab_km2":
+            st.markdown(T.source(
+                "Score calculé tous opérateurs confondus : le filtre "
+                "opérateur ne s'y applique pas." if col == "DCPI" else
+                f"Valeurs calculées pour <b>{op}</b> seul. Le commentaire "
+                "ci-dessus décrit l'ensemble des opérateurs."),
+                unsafe_allow_html=True)
         t = vue.dropna(subset=[col]).nlargest(6, col)[["prefecture", col]]
         st.markdown('<div class="carte-t" style="margin-top:1.1rem">'
                     'Six valeurs les plus élevées</div>', unsafe_allow_html=True)
+        # `fmt` porte le nombre de decimales (ex. ",.2f") : on le reutilise
+        # pour T.fr plutot que de laisser Python's ".2f" imposer un point.
+        dec = int(re.search(r"\.(\d+)f", fmt).group(1))
         for _, r in t.iterrows():
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
@@ -137,20 +188,24 @@ def afficher(ctx: dict) -> None:
                 f'font-size:0.86rem">'
                 f'<span style="color:{T.ENCRE}">{r.prefecture}</span>'
                 f'<span style="font-weight:600;color:{T.ENCRE}">'
-                f'{r[col]:{fmt}}</span></div>'.replace(",", " "),
+                f'{T.fr(r[col], dec)}</span></div>',
                 unsafe_allow_html=True)
 
     with st.expander("Voir toutes les données"):
         t = vue[["prefecture", "region", "population", "superficie_km2",
                  "densite_hab_km2", "points_mm", "hab_par_point_mm",
-                 "agences_actives", "data_centers",
+                 "agences", "agences_actives", "data_centers",
                  "dist_agence_med_canton_km", "DCPI"]].copy()
         t.columns = ["Préfecture", "Région", "Population", "Superficie (km²)",
                      "Densité (hab/km²)", "Points MM", "Hab./point MM",
-                     "Agences actives", "Data centers", "Dist. médiane (km)",
-                     "DCPI"]
-        st.dataframe(t.sort_values("DCPI", ascending=False).style.format({
+                     "Agences recensées", "Agences actives", "Data centers",
+                     "Dist. médiane agence active (km)", "DCPI"]
+        t = t.sort_values("DCPI", ascending=False)
+        st.dataframe(t.style.format({
             "Population": "{:,.0f}", "Superficie (km²)": "{:,.0f}",
             "Densité (hab/km²)": "{:,.0f}", "Points MM": "{:,.0f}",
-            "Hab./point MM": "{:,.0f}", "Dist. médiane (km)": "{:,.0f}",
+            "Hab./point MM": "{:,.0f}", "Dist. médiane agence active (km)": "{:,.0f}",
             "DCPI": "{:.1f}"}, thousands=" ", decimal=","), width="stretch", hide_index=True)
+        st.download_button("Télécharger ce tableau (CSV)", D.csv(t, ctx),
+                           "infrastructures_prefectures.csv", "text/csv",
+                           icon=":material/download:", key="dl_infra")

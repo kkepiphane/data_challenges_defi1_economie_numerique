@@ -40,8 +40,8 @@ data/processed/*
 !data/external/.gitkeep
 
 # EXCEPTION — le paquet applicatif est versionné, et il doit l'être.
-# Streamlit Cloud ne déploie que ce que le dépôt contient : sans ces dix
-# fichiers (4,5 Mo au total), l'application se déploie vide. Ils sont produits
+# Streamlit Cloud ne déploie que ce que le dépôt contient : sans ces quatorze
+# fichiers (4,9 Mo au total), l'application se déploie vide. Ils sont produits
 # et contrôlés par la chaîne, jamais édités à la main.
 !data/processed/acces_canton.csv
 !data/processed/acces_prefecture.csv
@@ -53,6 +53,11 @@ data/processed/*
 !data/processed/indicateurs_commune.csv
 !data/processed/points_mobile_money.csv
 !data/processed/prefectures.geojson
+!data/processed/zones_blanches_canton.csv
+!data/processed/zones_blanches_variantes.csv
+!data/processed/cantons.geojson
+!data/processed/vide_temoins.csv
+!data/processed/acces_operateur_prefecture.csv
 
 # Reports générés
 *.pdf
