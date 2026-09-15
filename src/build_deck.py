@@ -368,7 +368,9 @@ def main() -> None:
              f"{_esp(int(sans_agence.population.sum()))} habitants concernés"),
         ],
         auteur="KOUTSAVA Kossi Epiphane",
-        qualite="Analyse de données · Défi Économie numérique",
+        # Vide : page de garde epuree (nom seul), choix de l'auteur en
+        # relecture — voir reports/Defi1_Togo_Connectivite_numerique.pptx.
+        qualite="",
         sources=("Géoportail national (PRISE 2021-2022) · RGPH-5, INSEED "
                  "(novembre 2022) · limites COD-AB v02, OCHA (2021) — "
                  f"{n_ctrl} contrôles arithmétiques publiés"))
@@ -650,8 +652,9 @@ def main() -> None:
         ("1 · Cartographier agences et centres de données",
          f"{n_agences} agences recensées après dédoublonnage, dont "
          f"{n_actives} actives : {n_agences_moov} Moov et {n_actives_tgc} "
-         f"Togocom actives — et {n_dc} centres de données, tous à Lomé. "
-         "« Télécom » est un doublon ; CANAL+ est vide à la source.",
+         f"Togocom actives — et {n_dc} centres de données, concentrés dans "
+         "le Grand Lomé. « Télécom » est un doublon ; CANAL+ est vide à la "
+         "source.",
          "Traité", SERIE_3),
         ("2 · Mobile Money au regard de la population",
          f"{_esp(national)} habitants par point en moyenne, de 1 à "

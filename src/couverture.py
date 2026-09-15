@@ -236,7 +236,10 @@ def armoiries_png(fond: RGBColor = FOND, largeur_px: int = 900):
 # =============================================================================
 def page_de_garde(prs, titre, these, reperes, auteur, qualite, sources,
                   surtitre="DÉFI 1 · ÉCONOMIE NUMÉRIQUE · RÉPUBLIQUE TOGOLAISE"):
-    """`reperes` : trois triplets (etiquette, valeur, precision)."""
+    """`reperes` : trois triplets (etiquette, valeur, precision). `qualite` :
+    ligne sous le nom de l'auteur (role/fonction) — vide pour l'omettre,
+    comme sur la version relue par l'auteur (page de garde epuree, le nom
+    seul)."""
     s = prs.slides.add_slide(prs.slide_layouts[6])
     filet(s, 0, 0, L, H, FOND)
     bande_tricolore(s)
@@ -275,8 +278,9 @@ def page_de_garde(prs, titre, these, reperes, auteur, qualite, sources,
     y_sig = Inches(6.50)
     texte(s, MARGE, y_sig, Inches(6.2), Inches(0.3), auteur, 14.5, BLANC,
           gras=True)
-    texte(s, MARGE, y_sig + Inches(0.27), Inches(6.2), Inches(0.22),
-          qualite.upper(), 8.5, TEXTE_MUET, gras=True, interlettrage=1.3)
+    if qualite:
+        texte(s, MARGE, y_sig + Inches(0.27), Inches(6.2), Inches(0.22),
+              qualite.upper(), 8.5, TEXTE_MUET, gras=True, interlettrage=1.3)
     filet(s, MARGE, Inches(7.09), Inches(8.95), Pt(0.75), VERT_FILET)
     texte(s, MARGE, Inches(7.19), Inches(11.45), Inches(0.22),
           sources, 8, TEXTE_TENU, interligne=1.4)
