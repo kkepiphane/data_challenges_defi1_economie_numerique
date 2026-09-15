@@ -215,29 +215,24 @@ def afficher(ctx: dict) -> None:
     tete = par_pref.index[0] if len(par_pref) else None
 
     def _n(v: float) -> str:
-        return f"{v:,.0f}".replace(",", " ")
+        return T.fr(v, 0)
 
+    # Trois messages exactement : les autres constats (qui concentre le
+    # risque, la recommandation) ont leur propre section plus bas — les
+    # repeter ici ferait double emploi.
     messages = [
         "La couverture mobile <b>n'est pas mesurable</b> avec les données "
-        "ouvertes : les couches d'antennes existent au catalogue national, "
-        "hors open data.",
-        "Proxy déclaré : un agent Mobile Money actif témoigne d'un réseau. "
-        f"<b>{len(eleve)} cantons à risque élevé</b>{avec_op}, dont "
-        f"{len(sans)} sans aucun agent — des zones à vérifier, pas des zones "
-        "blanches avérées.",
+        "ouvertes disponibles.",
+        f"Le proxy identifie <b>{len(eleve)} cantons à vérifier</b>{avec_op}, "
+        f"dont <b>{len(sans)} sans aucun agent Mobile Money</b>.",
     ]
-    if tete is not None:
-        suite = "."
-        if communs:
-            verbe = "est" if len(communs) == 1 else "sont"
-            accord = "" if len(communs) == 1 else "s"
-            suite = (f" ; {D.liste_fr(communs)} {verbe} aussi prioritaire"
-                     f"{accord} dans l'indice DCPI.")
-        messages.append(f"<b>{tete} concentre {int(par_pref.iloc[0])} des "
-                        f"{len(eleve)} cantons à risque</b>{suite}")
-    messages.append(
-        "Recommandation : <b>publier les couches d'antennes et de "
-        "couverture</b>, pour confirmer ou écarter chaque zone suspecte.")
+    if communs:
+        messages.append(f"<b>{D.liste_fr(communs)}</b> "
+                        f"{'figure' if len(communs) == 1 else 'figurent'} "
+                        "aussi parmi les priorités robustes.")
+    else:
+        messages.append("Aucun des cantons à risque élevé n'appartient à une "
+                        "préfecture prioritaire robuste de l'indice DCPI.")
     st.markdown(T.a_retenir(messages), unsafe_allow_html=True)
 
     k = st.columns(4, gap="small")
@@ -250,12 +245,12 @@ def afficher(ctx: dict) -> None:
                         f"{_n(sans.area_sqkm.sum())} km² sans témoin de couverture",
                         T.STATUT["critique"]), unsafe_allow_html=True)
     k[2].markdown(T.kpi(f"Surface à plus de 10 km de tout agent{avec_op}",
-                        f"{surface_vide * 100:.1f}".replace(".", ","), "%",
+                        T.fr(surface_vide * 100, 1), "%",
                         "grille de 1 km, distance au témoin le plus proche",
                         T.STATUT["attention"]), unsafe_allow_html=True)
     if op == "Tous":
         k[3].markdown(T.kpi("Stabilité du classement",
-                            f"{variantes.spearman.min():.2f}".replace(".", ","),
+                            T.fr(variantes.spearman.min(), 2),
                             "", "corrélation minimale, retrait de chaque "
                             "composante", T.STATUT["bon"]),
                       unsafe_allow_html=True)
@@ -331,28 +326,40 @@ def afficher(ctx: dict) -> None:
     # ======================================== 2. POURQUOI UN PROXY
     st.markdown(T.etiquette("2 · Pourquoi un proxy, et ce qu'il ne dit pas",
                             "1.4rem"), unsafe_allow_html=True)
-    cartes_statut = [
-        ("Donnée indisponible", T.STATUT["critique"],
-         "<b>Aucune mesure de couverture radio</b> — ni signal, ni "
-         "technologie, ni position d'antenne — dans les sources ouvertes."),
-        ("Sources cherchées", T.STATUT["attention"],
-         "Les 30 fichiers du défi, puis les <b>454 couches</b> du catalogue "
-         "national. Les couches antennes existent, <b>hors open data</b>."),
-        ("Proxy utilisé", T.SERIE_1,
-         "Un agent Mobile Money actif ne fonctionne pas sans réseau : c'est un "
-         "<b>témoin indirect de couverture</b>."),
-        ("Ce que le proxy ne dit pas", T.ENCRE_MUET,
-         "<b>Absence d'agent ≠ absence de réseau.</b> Le résultat est une "
-         "liste de zones à investiguer."),
-    ]
-    cols = st.columns(4, gap="small")
-    for col, (titre, coul, corps) in zip(cols, cartes_statut):
-        col.markdown(
-            f'<div class="carte" style="border-top:3px solid {coul};'
-            f'min-height:8rem"><div class="carte-t">{titre}</div>'
-            f'<div style="font-size:0.84rem;color:{T.ENCRE_2};line-height:1.55">'
-            f'{corps}</div></div>', unsafe_allow_html=True)
-    with st.expander("Détail des sources interrogées"):
+    st.markdown(T.lecture(
+        "<b>Absence d'agent ≠ absence de réseau.</b> Le résultat est une "
+        "liste de zones à investiguer, jamais une carte de couverture."),
+        unsafe_allow_html=True)
+    with st.expander("Détail : sources cherchées, proxy retenu, ses limites "
+                     "(454 couches du catalogue national interrogées)"):
+        cartes_statut = [
+            ("Donnée indisponible", T.STATUT["critique"],
+             "<b>Aucune mesure de couverture radio</b> — ni signal, ni "
+             "technologie, ni position d'antenne — dans les sources "
+             "ouvertes."),
+            ("Sources cherchées", T.STATUT["attention"],
+             "Les 30 fichiers du défi, puis les <b>454 couches</b> du "
+             "catalogue national. Les couches antennes existent, <b>hors "
+             "open data</b>."),
+            ("Proxy utilisé", T.SERIE_1,
+             "La présence d'un agent Mobile Money constitue un <b>témoin "
+             "minimal de connectivité exploitable</b>, mais ne mesure ni la "
+             "qualité ni la continuité du réseau."),
+            ("Ce que le proxy ne dit pas", T.ENCRE_MUET,
+             "<b>Absence d'agent ≠ absence de réseau.</b> Le résultat est "
+             "une liste de zones à investiguer."),
+        ]
+        cols = st.columns(4, gap="small")
+        for col, (titre, coul, corps) in zip(cols, cartes_statut):
+            col.markdown(
+                f'<div class="carte" style="border-top:3px solid {coul};'
+                f'min-height:8rem"><div class="carte-t">{titre}</div>'
+                f'<div style="font-size:0.84rem;color:{T.ENCRE_2};'
+                f'line-height:1.55">{corps}</div></div>',
+                unsafe_allow_html=True)
+        st.markdown("")
+        st.markdown('<div class="carte-t">Sources interrogées, en détail'
+                    '</div>', unsafe_allow_html=True)
         st.dataframe(SOURCES, width="stretch", hide_index=True)
 
     # ================================================ 3. LE DETAIL
@@ -394,11 +401,12 @@ def afficher(ctx: dict) -> None:
                 f"Risque {r.classe.lower()} : {int(r.n_mm)} agent{pluriel} "
                 f"Mobile Money sur {_n(r.area_sqkm)} km², agence active la plus "
                 f"proche à {r.dist_agence_km:.0f} km."), unsafe_allow_html=True)
+            n_op = int(r.n_operateurs)
             st.markdown(T.source(
-                f"{int(r.n_operateurs)} opérateur(s) identifié(s) · "
-                f"{r.part_vide_10km * 100:.0f} % de la surface à plus de 10 km "
-                f"de tout agent · préfecture à {_n(r.densite_prefecture)} "
-                "hab./km²."), unsafe_allow_html=True)
+                f"{n_op} opérateur{'s' if n_op != 1 else ''} identifié"
+                f"{'s' if n_op != 1 else ''} · {T.pct(r.part_vide_10km)} de "
+                "la surface à plus de 10 km de tout agent · préfecture à "
+                f"{_n(r.densite_prefecture)} hab./km²."), unsafe_allow_html=True)
 
     with d2:
         st.markdown(T.lecture(

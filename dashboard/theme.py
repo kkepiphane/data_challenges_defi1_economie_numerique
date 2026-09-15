@@ -47,6 +47,36 @@ import plotly.io as pio
 import streamlit as st
 
 # =============================================================================
+# FORMATAGE DES NOMBRES — notation francaise, PARTOUT
+# =============================================================================
+# Python formate "12.7" et "20%" par defaut : virgule et espace anglo-saxons.
+# Deux fonctions, appelees partout ou un nombre est ecrit dans un texte, pour
+# qu'aucune page ne mette a nu le formatage par defaut de Python.
+def fr(x: float, dec: int = 1) -> str:
+    """Nombre en notation francaise : virgule decimale, espace pour les
+    milliers. `fr(1234.5, 1)` -> "1 234,5" ; `fr(409, 0)` -> "409". Espace
+    ASCII ordinaire — pas une espace insecable — pour rester coherent avec le
+    reste du code (`.replace(",", " ")`, deja partout ailleurs)."""
+    entier, _, decimales = f"{x:,.{dec}f}".partition(".")
+    entier = entier.replace(",", " ")
+    return entier if dec == 0 else f"{entier},{decimales}"
+
+
+def pct(x: float, dec: int = 0) -> str:
+    """Pourcentage en notation francaise : espace avant le signe %.
+    `pct(0.271, 0)` -> "27 %" ; l'entree est une FRACTION (0-1)."""
+    return f"{fr(x * 100, dec)} %"
+
+
+def ordinal(n: int) -> str:
+    """Ordinal francais : « 1er » pour 1, « 2ᵉ », « 3ᵉ »... au-dela (« ᵉ » en
+    exposant, deja l'usage du reste du tableau de bord). Le francais n'a pas
+    la meme forme pour le premier rang que pour les suivants — « 1ᵉ » seul
+    n'existe pas."""
+    return "1er" if n == 1 else f"{n}ᵉ"
+
+
+# =============================================================================
 # PAPIER ET ENCRE
 # =============================================================================
 # Le fond n'est pas blanc mais CREME. Un blanc pur sur un ecran lumineux fatigue

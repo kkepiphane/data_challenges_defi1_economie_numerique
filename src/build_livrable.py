@@ -307,6 +307,39 @@ def _verifier(dossier: Path) -> list[tuple[str, bool, str]]:
     except Exception as e:                      # pragma: no cover
         controles.append(("Agences et contrôles : support = tableau de bord",
                           False, f"{type(e).__name__}: {e}"[:120]))
+
+    # COHERENCE — le total de "points a ouvrir" doit etre IDENTIQUE sur
+    # Arbitrage (poids de reference, objectif par defaut, les 9 premiers du
+    # classement), Plan d'action (les 9 territoires robustes — le meme
+    # ensemble, verifie ailleurs) et le support. Une seule fonction partagee
+    # (`data.plan_couverture`) alimente les deux pages ; ce controle detecte
+    # si l'une d'elles s'en ecartait un jour.
+    try:
+        import numpy as np
+        import pandas as pd
+        import data as _D
+        pref = _D.prefectures()
+        sens = pd.read_csv(_D.PROCESSED / "dcpi_sensibilite.csv")
+        stables = set(sens[sens.frequence_top10 >= 0.90].prefecture)
+        top9 = set(pref.nsmallest(9, "rang_DCPI").prefecture)
+        prio = pref[pref.prefecture.isin(stables)]
+        # `data.plan_couverture` (utilisee par Arbitrage et Plan d'action) vs
+        # la meme formule recalculee independamment (celle du support) :
+        # les deux DOIVENT concorder.
+        via_fonction = int(_D.plan_couverture(prio, _D.OBJECTIF_DEFAUT)
+                          .points_a_ouvrir.sum())
+        via_formule = int((np.ceil(prio.population / _D.OBJECTIF_DEFAUT)
+                          - prio.points_mm).clip(lower=0).sum())
+        controles.append((
+            "Points à ouvrir : Arbitrage = Plan d'action = support",
+            stables == top9 and via_fonction == via_formule,
+            f"{via_fonction} points pour les {len(stables)} territoires "
+            f"robustes (= top {len(top9)} du classement DCPI : "
+            f"{stables == top9})"))
+    except Exception as e:                      # pragma: no cover
+        controles.append((
+            "Points à ouvrir : Arbitrage = Plan d'action = support",
+            False, f"{type(e).__name__}: {e}"[:120]))
     return controles
 
 

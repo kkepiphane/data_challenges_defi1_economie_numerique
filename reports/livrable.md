@@ -19,7 +19,7 @@ declaree valide.
 | Page « Infrastructures » | OK | 30 blocs, 1 tables |
 | Page « Desserte & population » | OK | 39 blocs, 2 tables |
 | Page « Territoires prioritaires » | OK | 36 blocs, 2 tables |
-| Page « Couverture & zones blanches » | OK | 36 blocs, 2 tables |
+| Page « Couverture & zones blanches » | OK | 39 blocs, 2 tables |
 | Page « Arbitrage » | OK | 31 blocs, 2 tables |
 | Page « Plan d'action » | OK | 38 blocs, 1 tables |
 | Page « Méthode & limites » | OK | 28 blocs, 2 tables |
@@ -31,3 +31,4 @@ declaree valide.
 | Départs rapides de pondération sans exception | OK | 4 préréglages appliqués |
 | Repondération de référence = DCPI publié | OK | écart max 7.11e-15 · corrélation des rangs 1.0000 |
 | Agences et contrôles : support = tableau de bord | OK | recensées/actives/contrôles : app (90, 88, 35) · support (90, 88, 35) |
+| Points à ouvrir : Arbitrage = Plan d'action = support | OK | 1497 points pour les 9 territoires robustes (= top 9 du classement DCPI : True) |

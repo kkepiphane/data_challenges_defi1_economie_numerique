@@ -194,8 +194,8 @@ def main() -> None:
         "3 sources · 39 préfectures · 117 communes · "
         f"{D.libelle_agences()} · infrastructures 2021-2022, population 2022, "
         f"contours 2021 · {ok} contrôles arithmétiques sur {total} au vert · "
-        "aucune valeur n'est imputée : une donnée manquante est déclarée "
-        "manquante."), unsafe_allow_html=True)
+        "aucune valeur n'est imputée : toute donnée absente est déclarée "
+        "absente."), unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
