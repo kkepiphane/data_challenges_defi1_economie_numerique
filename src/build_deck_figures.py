@@ -203,7 +203,7 @@ def concentration(pref: pd.DataFrame) -> Path:
     ax.plot([0.5, 0.5], [0, moitie], color=CRITIQUE, linewidth=1.2, ls=":")
     ax.plot([0, 0.5], [moitie, moitie], color=CRITIQUE, linewidth=1.2, ls=":")
     ax.annotate(f"la moitié la moins bien desservie\nde la population n'a que "
-                f"{moitie:.0%} des points",
+                f"{moitie * 100:.0f} % des points",
                 xy=(0.5, moitie), xytext=(0.54, moitie - 0.20),
                 fontsize=9, color=CRITIQUE,
                 arrowprops=dict(arrowstyle="-", color=CRITIQUE, lw=1))
@@ -212,8 +212,8 @@ def concentration(pref: pd.DataFrame) -> Path:
     ax.set_ylabel("Part cumulée des points Mobile Money", fontsize=9.5)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.xaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0))
-    ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0))
+    ax.xaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0, symbol=" %"))
+    ax.yaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0, symbol=" %"))
     ax.grid(True, color=GRILLE, linewidth=0.8)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, fontsize=9, loc="upper left")
@@ -230,12 +230,12 @@ def sensibilite(sens: pd.DataFrame) -> Path:
     ax.barh(s.prefecture, s.frequence_top10, color=couleurs, height=0.72)
     ax.axvline(0.90, color=CRITIQUE, linewidth=1.6)
     for y, f in enumerate(s.frequence_top10):
-        ax.text(f + 0.015, y, f"{f:.0%}", va="center", fontsize=8.6,
+        ax.text(f + 0.015, y, f"{f * 100:.0f} %", va="center", fontsize=8.6,
                 color=ENCRE_2)
 
     ax.set_xlabel("Présence dans le top 10 des priorités", fontsize=9.5)
     ax.set_xlim(0, 1.13)
-    ax.xaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0))
+    ax.xaxis.set_major_formatter(mpl.ticker.PercentFormatter(1.0, decimals=0, symbol=" %"))
     ax.xaxis.grid(True, color=GRILLE, linewidth=0.8)
     ax.set_axisbelow(True)
     ax.tick_params(axis="y", labelsize=9, length=0)

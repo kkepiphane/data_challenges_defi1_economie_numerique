@@ -126,22 +126,24 @@ def _densite(pref, vue, ctx: dict) -> None:
 
     with d:
         st.markdown(T.action(
-            f"<b>La densité n'explique que {r2:.0%} des écarts d'équipement.</b> "
-            f"À moins de 150 hab./km², {fort.prefecture} compte "
-            f"{fort.points_mm_pour_10k_hab:.0f} points pour 10 000 habitants, "
-            f"{faible.prefecture} {faible.points_mm_pour_10k_hab:.0f}. Le "
-            "déficit n'est donc pas la fatalité d'un territoire rural : à "
-            "densité égale, d'autres font nettement mieux. C'est ce qui le rend "
-            "<b>corrigeable par le déploiement d'agents</b>, sans attendre que "
-            "le territoire se densifie."),
+            f"<b>La densité n'explique que {T.pct(r2)} des écarts "
+            f"d'équipement.</b> À moins de 150 hab./km², {fort.prefecture} "
+            f"compte {fort.points_mm_pour_10k_hab:.0f} points pour "
+            f"10 000 habitants, {faible.prefecture} "
+            f"{faible.points_mm_pour_10k_hab:.0f}. Le déficit n'est donc pas "
+            "la fatalité d'un territoire rural : à densité égale, d'autres "
+            "font nettement mieux. <b>Le déficit peut être réduit par le "
+            "déploiement d'agents</b>, sans attendre que le territoire se "
+            "densifie."),
             unsafe_allow_html=True)
         pluriel = len(sous) > 1
-        manque = f"{int(sous.manque_densite.sum()):,}".replace(",", " ")
+        manque = T.fr(int(sous.manque_densite.sum()), 0)
         st.markdown(T.conclusion(
             f"{len(sous)} préfecture{'s' if pluriel else ''} du périmètre "
-            f"{'ont' if pluriel else 'a'} au moins {-SEUIL_ECART * 100:.0f} % "
-            f"de points de moins que {'leur' if pluriel else 'sa'} densité ne "
-            f"le laisse prévoir, soit {manque} points manquants."
+            f"{'ont' if pluriel else 'a'} au moins {T.pct(-SEUIL_ECART)} de "
+            f"points de moins que {'leur' if pluriel else 'sa'} densité ne "
+            f"le laisse prévoir, soit {manque} points supplémentaires selon "
+            "le modèle."
             if len(sous) else
             "Aucune préfecture du périmètre n'est nettement sous-équipée au "
             "regard de sa densité."), unsafe_allow_html=True)
@@ -151,17 +153,17 @@ def _densite(pref, vue, ctx: dict) -> None:
     with st.expander("Détail : territoires sous-équipés au regard de leur densité"):
         k = st.columns(4, gap="small")
         k[0].markdown(T.kpi("Part des écarts expliquée par la densité",
-                            f"{r2:.0%}", "",
-                            f"R² log-log · corrélation des rangs {rho:.2f}"
-                            .replace(".", ","), T.SERIE_1), unsafe_allow_html=True)
+                            T.pct(r2), "",
+                            f"R² log-log · corrélation des rangs {T.fr(rho, 2)}",
+                            T.SERIE_1), unsafe_allow_html=True)
         k[1].markdown(T.kpi("Sous-équipés à densité comparable", f"{len(sous)}",
                             f"/ {len(m)}",
-                            f"au moins {-SEUIL_ECART:.0%} sous l'équipement attendu",
-                            T.STATUT["critique"]), unsafe_allow_html=True)
+                            f"au moins {T.pct(-SEUIL_ECART)} sous l'équipement "
+                            "attendu", T.STATUT["critique"]), unsafe_allow_html=True)
         k[2].markdown(T.kpi("Points manquants au regard de la densité",
-                            f"{int(sous.manque_densite.sum()):,}".replace(",", " "),
-                            "", f"{int(sous.population.sum()):,} habitants concernés"
-                            .replace(",", " "), T.SERIE_2), unsafe_allow_html=True)
+                            T.fr(int(sous.manque_densite.sum()), 0),
+                            "", f"{T.fr(int(sous.population.sum()), 0)} habitants "
+                            "concernés", T.SERIE_2), unsafe_allow_html=True)
         k[3].markdown(T.kpi("Écart entre territoires ruraux",
                             f"×{fort.points_mm_pour_10k_hab / faible.points_mm_pour_10k_hab:.0f}",
                             "", f"{fort.prefecture} face à {faible.prefecture}, "
@@ -192,16 +194,17 @@ def _densite(pref, vue, ctx: dict) -> None:
             # region rurale le rendrait faux.
             if (grand is not None and grand.manque_densite > 0
                     and grand.densite_hab_km2 >= 500):
-                dens = f"{grand.densite_hab_km2:,.0f}".replace(",", " ")
-                vol = f"{int(grand.manque_densite):,}".replace(",", " ")
+                dens = T.fr(grand.densite_hab_km2, 0)
+                vol = T.fr(int(grand.manque_densite), 0)
                 st.markdown(T.lecture(
                     f"En volume, le premier besoin n'est pas rural : "
                     f"<b>{grand.prefecture}</b> ({dens} hab./km²) manque de "
                     f"<b>{vol} points</b> au regard de sa densité, et n'est "
-                    f"pourtant que <b>{int(grand.rang_DCPI)}ᵉ sur 39</b> dans "
-                    "l'indice de priorité, qui raisonne en habitants par point "
-                    "et non en volume. Ce besoin périurbain appelle un "
-                    "traitement distinct des priorités rurales."),
+                    f"pourtant que <b>{T.ordinal(int(grand.rang_DCPI))} sur "
+                    "39</b> dans l'indice de priorité, qui raisonne en "
+                    "habitants par point et non en volume. Ce besoin "
+                    "périurbain appelle un traitement distinct des "
+                    "priorités rurales."),
                     unsafe_allow_html=True)
 
 
@@ -237,38 +240,37 @@ def afficher(ctx: dict) -> None:
     _, _, _, r2, _ = modele_densite(pref)
 
     def _n(v: float) -> str:
-        return f"{v:,.0f}".replace(",", " ")
+        return T.fr(v, 0)
 
+    # Trois messages, pas quatre : la concurrence Moov/Togocom a sa propre
+    # section plus bas (avec son propre chiffre) — la repeter ici ferait
+    # double emploi.
     st.markdown(T.a_retenir([
         f"La moitié la moins desservie de la population ne dispose que de "
-        f"<b>{moitie:.0%} des points</b> Mobile Money, au lieu de 50 %."
-        .replace("%", " %").replace("  %", " %"),
-        f"<b>{len(quadrant)} préfectures</b> sont à la fois plus peuplées que la "
-        f"médiane et moins desservies que la moyenne : "
-        f"<b>{_n(quadrant.population.sum())} habitants</b>.",
-        f"La densité n'explique que <b>{r2 * 100:.0f} %</b> des écarts : le "
-        "déficit se corrige en déployant des agents, sans attendre que le "
-        "territoire se densifie.",
-        f"<b>{_n(n_tgc)} points ne servent que Togocom</b>, contre "
-        f"{_n(n_moov)} pour Moov seul : là, l'usager n'a aucune alternative.",
+        f"<b>{T.pct(moitie)} des points</b> Mobile Money.",
+        f"<b>{len(quadrant)} préfectures</b> combinent population élevée et "
+        f"faible desserte, soit <b>{_n(quadrant.population.sum())} "
+        "habitants</b>.",
+        f"La densité explique <b>{T.pct(r2)}</b> des écarts, selon une "
+        "régression descriptive.",
     ]), unsafe_allow_html=True)
 
     # =========================================================== indicateurs
+    ecart_extremes = c.hab_par_point_mm.max() / c.hab_par_point_mm.min()
     k = st.columns(4, gap="small")
-    k[0].markdown(T.kpi("Indice de Gini de la desserte", f"{gini:.3f}", "",
+    k[0].markdown(T.kpi("Indice de Gini de la desserte", T.fr(gini, 3), "",
                         "0 = strictement proportionnel à la population",
                         T.SERIE_1), unsafe_allow_html=True)
     k[1].markdown(T.kpi("Part des points pour la moitié la moins desservie",
-                        f"{moitie:.0%}", "",
+                        T.pct(moitie), "",
                         "au lieu de 50 % si la répartition suivait la population",
                         T.STATUT["critique"]), unsafe_allow_html=True)
     k[2].markdown(T.kpi("Territoires peuplés et sous-desservis",
                         f"{len(quadrant)}", "/ 39",
-                        f"{int(quadrant.population.sum()):,} habitants concernés"
-                        .replace(",", " "), T.STATUT["serieux"]),
-                  unsafe_allow_html=True)
+                        f"{_n(quadrant.population.sum())} habitants concernés",
+                        T.STATUT["serieux"]), unsafe_allow_html=True)
     k[3].markdown(T.kpi("Écart entre extrêmes",
-                        f"×{c.hab_par_point_mm.max() / c.hab_par_point_mm.min():.1f}",
+                        f"×{T.fr(ecart_extremes, 1)}",
                         "", f"de {c.loc[c.hab_par_point_mm.idxmin(), 'prefecture']} "
                         f"à {c.loc[c.hab_par_point_mm.idxmax(), 'prefecture']}",
                         T.SERIE_2),
@@ -342,8 +344,8 @@ def afficher(ctx: dict) -> None:
             st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
             st.markdown(T.conclusion(
                 f"La moitié la moins desservie de la population dispose de "
-                f"{moitie * 100:.0f} % des points : l'écart à la diagonale "
-                "mesure cette inégalité."), unsafe_allow_html=True)
+                f"{T.pct(moitie)} des points : l'écart à la diagonale mesure "
+                "cette inégalité."), unsafe_allow_html=True)
             st.markdown(T.source(
                 "Préfectures classées du plus faible au plus fort taux "
                 "d'équipement par habitant. Transformation de présentation "
@@ -377,7 +379,7 @@ def afficher(ctx: dict) -> None:
                 x=rep.points, y=rep.libelle, orientation="h",
                 marker=dict(color=[couleurs.get(l, T.GRIS_FOND)
                                    for l in rep.libelle]),
-                text=[f"{v:,}".replace(",", " ") + f"   ({v / len(brut):.1%})"
+                text=[f"{T.fr(v, 0)}   ({T.pct(v / len(brut), 1)})"
                       for v in rep.points],
                 textposition="outside", textfont=dict(size=11, color=T.ENCRE_2),
                 hovertemplate="<b>%{y}</b><br>%{x:,.0f} points<extra></extra>"))
@@ -392,12 +394,12 @@ def afficher(ctx: dict) -> None:
         st.markdown(T.conclusion(
             f"{_n(n_tgc)} points ne servent que Togocom, contre {_n(n_moov)} "
             f"pour Moov seul — un rapport de "
-            f"{n_tgc / max(n_moov, 1):.1f}".replace(".", ",") + " à 1. Ouvrir "
-            "la concurrence est un objectif en soi."), unsafe_allow_html=True)
+            f"{T.fr(n_tgc / max(n_moov, 1), 1)} à 1. Ouvrir la concurrence "
+            "est un objectif en soi."), unsafe_allow_html=True)
         st.markdown(T.lecture(
             "Là où un seul opérateur est présent, l'usager n'a aucune "
-            "alternative en cas de panne, de tarif ou de rupture de "
-            "liquidité."), unsafe_allow_html=True)
+            "alternative en cas de panne, de problème tarifaire ou de "
+            "rupture de liquidité."), unsafe_allow_html=True)
         st.markdown(T.source(
             f"{_n(n_nsp)} points à opérateur non renseigné forment une "
             "catégorie propre, ni réaffectée ni supprimée. Un point servi par "

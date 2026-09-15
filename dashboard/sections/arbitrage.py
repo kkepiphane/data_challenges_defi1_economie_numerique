@@ -85,16 +85,10 @@ def _reponderer(pref: pd.DataFrame, poids: dict[str, float]) -> pd.DataFrame:
 
 
 def _plan_couverture(sel: pd.DataFrame, objectif: int) -> pd.DataFrame:
-    """Convertit un objectif d'habitants par point en volume d'equipement.
-
-    Une seule regle, et elle est arithmetique : atteindre `objectif` habitants
-    par point sur un territoire de P habitants demande ceil(P / objectif)
-    points. On retranche l'existant ; on ne descend jamais sous zero, car un
-    territoire deja mieux desservi que l'objectif n'a rien a rendre.
-    """
-    t = sel.copy()
-    t["points_cibles"] = np.ceil(t.population / objectif).astype(int)
-    t["points_a_creer"] = (t.points_cibles - t.points_mm).clip(lower=0).astype(int)
+    """Points a ouvrir (regle partagee, voir `data.plan_couverture`), plus le
+    seul ajout propre a cette page : un guichet a implanter la ou aucune
+    agence active n'existe encore."""
+    t = D.plan_couverture(sel, objectif)
     t["agences_a_ouvrir"] = (t.agences_actives == 0).astype(int)
     return t
 
@@ -144,7 +138,7 @@ def afficher(ctx: dict) -> None:
         somme = sum(poids.values()) or 1
         parts = " &nbsp;·&nbsp; ".join(
             f'<span style="color:{c}">■</span> {lib} '
-            f'<b>{poids[cle] / somme:.0%}</b>'
+            f'<b>{T.pct(poids[cle] / somme)}</b>'
             for cle, lib, _, c, _ in COMPOSANTES)
         st.markdown(T.source(
             "Poids effectifs, ramenés à 100 % : " + parts),
@@ -227,9 +221,11 @@ def afficher(ctx: dict) -> None:
     with cadrage:
         with T.bloc("Hypothèses de l'exercice"):
             objectif = st.slider(
-                "Objectif : habitants par point de service", 150, 900, 409, 10,
-                help="409 est la moyenne nationale actuelle. Viser plus bas, "
-                     "c'est viser mieux que la moyenne d'aujourd'hui.")
+                "Objectif : habitants par point de service", 150, 900,
+                D.OBJECTIF_DEFAUT, 10,
+                help=f"{D.OBJECTIF_DEFAUT} est la valeur de référence — proche "
+                     "de la moyenne nationale actuelle. Viser plus bas, c'est "
+                     "viser mieux que la moyenne d'aujourd'hui.")
             # Un curseur exige min < max : un seul territoire filtre n'en
             # laisse aucun choix a faire.
             combien = (st.slider(
@@ -247,7 +243,7 @@ def afficher(ctx: dict) -> None:
 
     plan = _plan_couverture(candidats.head(combien), objectif)
     pop_touchee = int(plan.population.sum())
-    a_creer = int(plan.points_a_creer.sum())
+    a_creer = int(plan.points_a_ouvrir.sum())
     guichets = int(plan.agences_a_ouvrir.sum())
     parc = int(pref.points_mm.sum())
 
@@ -257,27 +253,27 @@ def afficher(ctx: dict) -> None:
                 f"{'s' if combien > 1 else ''}"):
             k2 = st.columns(4, gap="small")
             k2[0].markdown(T.kpi(
-                "Population atteinte", f"{pop_touchee:,}".replace(",", " "), "",
-                f"{pop_touchee / D.POPULATION_NATIONALE:.0%} de la population "
-                "nationale", T.VERT), unsafe_allow_html=True)
+                "Population atteinte", T.fr(pop_touchee, 0), "",
+                f"{T.pct(pop_touchee / D.POPULATION_NATIONALE)} de la "
+                "population nationale", T.VERT), unsafe_allow_html=True)
             k2[1].markdown(T.kpi(
-                "Points à ouvrir", f"{a_creer:,}".replace(",", " "), "",
-                f"+{a_creer / parc:.0%} du parc national actuel", T.SERIE_1),
-                unsafe_allow_html=True)
+                "Points à ouvrir", T.fr(a_creer, 0), "",
+                f"+{T.pct(a_creer / parc)} du parc national actuel",
+                T.SERIE_1), unsafe_allow_html=True)
             k2[2].markdown(T.kpi(
                 "Guichets d'opérateur à implanter", f"{guichets}", "",
                 "territoires retenus sans aucune agence active", T.SERIE_2),
                 unsafe_allow_html=True)
             k2[3].markdown(T.kpi(
                 "Effort par habitant atteint",
-                f"{a_creer / max(pop_touchee, 1) * 10000:,.1f}".replace(".", ","),
+                T.fr(a_creer / max(pop_touchee, 1) * 10000, 1),
                 "pts/10 000 hab.", "mesure la concentration de l'effort",
                 T.SERIE_3), unsafe_allow_html=True)
 
             st.markdown("")
             courbe = _plan_couverture(candidats, objectif)
             cum_pop = courbe.population.cumsum() / D.POPULATION_NATIONALE
-            cum_pts = courbe.points_a_creer.cumsum()
+            cum_pts = courbe.points_a_ouvrir.cumsum()
             import plotly.graph_objects as go
             fig = go.Figure(go.Scatter(
                 x=cum_pts, y=cum_pop, mode="lines",
@@ -298,15 +294,16 @@ def afficher(ctx: dict) -> None:
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             st.markdown(T.source(
                 "Lecture : la pente s'aplatit quand on descend le classement — "
-                "les premiers territoires coûtent peu de points pour beaucoup "
-                "d'habitants atteints. C'est l'argument chiffré du ciblage."),
+                "les premiers territoires nécessitent relativement peu de "
+                "points à ouvrir pour beaucoup d'habitants atteints. C'est "
+                "l'argument chiffré du ciblage."),
                 unsafe_allow_html=True)
 
     # ------------------------------------------------------------ le detail
     st.markdown("")
     detail = plan[["rang_perso", "prefecture", "region", "population",
                    "hab_par_point_mm", "points_mm", "points_cibles",
-                   "points_a_creer", "agences_actives",
+                   "points_a_ouvrir", "agences_actives",
                    "dist_agence_med_canton_km", "DCPI_perso"]].copy()
     detail.columns = ["Rang", "Préfecture", "Région", "Population",
                       "Hab./point", "Points existants", "Points cibles",
@@ -330,7 +327,7 @@ def afficher(ctx: dict) -> None:
 
     entete = (f"# Défi 1 — Togo · export du tableau de bord\n"
               f"# Pondération : " + ", ".join(
-                  f"{lib} {poids[cle] / somme:.0%}"
+                  f"{lib} {T.pct(poids[cle] / somme)}"
                   for cle, lib, _, _, _ in COMPOSANTES) +
               f"\n# Objectif de desserte : {objectif} habitants par point\n"
               f"# Sources : PRISE 2021-2022, RGPH-5 2022, COD-AB 2021\n")
@@ -340,14 +337,16 @@ def afficher(ctx: dict) -> None:
 
     b = st.columns(3, gap="small")
     b[0].download_button(
-        "Classement reponderé · 39 préfectures",
+        "Télécharger le classement · 39 préfectures",
         _csv(classe[["rang_perso", "rang_DCPI", "prefecture", "region",
                      "population", "DCPI_perso", "DCPI"]]),
-        "classement_repondere.csv", "text/csv", width="stretch")
+        "classement_repondere.csv", "text/csv", width="stretch",
+        icon=":material/download:")
     b[1].download_button(
-        f"Plan de couverture · {combien} territoires",
-        _csv(detail), "plan_couverture.csv", "text/csv", width="stretch")
+        f"Télécharger le plan de couverture · {combien} territoires",
+        _csv(detail), "plan_couverture.csv", "text/csv", width="stretch",
+        icon=":material/download:")
     b[2].download_button(
-        "Table complète des indicateurs",
+        "Télécharger les indicateurs · table complète",
         _csv(pref), "indicateurs_prefectures.csv", "text/csv",
-        width="stretch")
+        width="stretch", icon=":material/download:")

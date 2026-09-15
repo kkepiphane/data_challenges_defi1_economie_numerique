@@ -325,8 +325,23 @@ def main() -> None:
     n_zb_eleve = int((zb.classe == "Élevé").sum())
     n_zb_sans = int(zb.sans_temoin.sum())
 
+    # Points a ouvrir pour les territoires prioritaires : MEME formule et
+    # MEME objectif que `dashboard/data.py::plan_couverture` /
+    # `OBJECTIF_DEFAUT` (409 hab./point) — Arbitrage, Plan d'action et ce
+    # support doivent toujours afficher le meme total pour les memes 9
+    # territoires (1 497 avec les donnees actuelles).
+    OBJECTIF_DEFAUT = 409
+    prio = pref[pref.prefecture.isin(stables.prefecture)]
+    a_ouvrir = int((_np.ceil(prio.population / OBJECTIF_DEFAUT)
+                    - prio.points_mm).clip(lower=0).sum())
+
     def _fr(x: float, dec: int = 1) -> str:
         return f"{x:.{dec}f}".replace(".", ",")
+
+    def _pct(x: float, dec: int = 0) -> str:
+        """Pourcentage en notation francaise (espace avant %) — meme regle
+        que `dashboard/theme.py::pct`, l'entree est une FRACTION (0-1)."""
+        return f"{_fr(x * 100, dec)} %"
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = L, H
@@ -522,7 +537,7 @@ def main() -> None:
     s = _diapo(prs, "Géospatial",
                "Analyse géospatiale et inégalités territoriales",
                f"La moitié la moins bien desservie de la population ne dispose "
-               f"que de {part_moitie:.0%} des points de service.".replace("%", " %"), 5)
+               f"que de {_pct(part_moitie)} des points de service.", 5)
     _image(s, "quadrant", Inches(0.55), Inches(2.1), hauteur=Inches(4.3))
     _image(s, "concentration", Inches(7.0), Inches(2.1), hauteur=Inches(4.3))
     _zone(s, Inches(0.55), Inches(6.5), Inches(6.0), Inches(0.5),
@@ -541,15 +556,17 @@ def main() -> None:
                "2 000 pondérations testées : leur priorité ne dépend pas de "
                "la méthode.", 6)
     _image(s, "carte_priorite", Inches(0.6), Inches(2.05), hauteur=Inches(4.75))
-    _image(s, "sensibilite", Inches(4.5), Inches(2.05), hauteur=Inches(4.05))
+    # hauteur bridee a 3,1 po : au-dela, l'image (ratio ~1,28) deborderait
+    # sur le tableau qui commence a x=8,6 po.
+    _image(s, "sensibilite", Inches(4.5), Inches(2.05), hauteur=Inches(3.1))
     lignes = [[f"{int(r.rang_DCPI)}", r.prefecture, _esp(int(r.population)),
                _esp(r.hab_par_point_mm), f"{int(r.agences_actives)}",
                f"{r.dist_agence_med_canton_km:.0f} km"]
               for _, r in pref.nsmallest(6, "rang_DCPI")
               .sort_values("rang_DCPI").iterrows()]
     _tableau(s, Inches(8.6), Inches(2.05), Inches(4.15),
-             ["#", "Préfecture", "Hab.", "Hab./pt", "Ag. act.", "Dist."],
-             lignes, largeurs=[0.08, 0.30, 0.19, 0.17, 0.10, 0.16], taille=8.5)
+             ["#", "Préfecture", "Hab.", "Hab./pt", "Ag.", "Dist."],
+             lignes, largeurs=[0.08, 0.28, 0.16, 0.16, 0.14, 0.18], taille=8.5)
     _zone(s, Inches(8.6), Inches(4.55), Inches(4.15), Inches(2.1),
           "Corrélation de Spearman moyenne avec le classement de référence : "
           "0,971 sur 2 000 pondérations aléatoires, plus huit variantes "
@@ -583,7 +600,9 @@ def main() -> None:
     _zone(s, Inches(7.15), Inches(5.6), Inches(5.4), Inches(1.0),
           f"Les {len(stables)} territoires prioritaires représentent "
           f"{_esp(pop_stable)} habitants, soit "
-          f"{pop_stable / 8_095_498:.0%} de la population nationale.\n"
+          f"{_pct(pop_stable / 8_095_498)} de la population nationale. Les "
+          f"porter à {OBJECTIF_DEFAUT} hab./point demanderait "
+          f"{_esp(a_ouvrir)} points Mobile Money supplémentaires.\n"
           "Un même territoire peut relever de plusieurs leviers : les "
           "populations ne s'additionnent pas d'un levier à l'autre.",
           10, False, ENCRE_2, interligne=1.32)
@@ -629,21 +648,20 @@ def main() -> None:
                "en open data, devient une limite critique.", 9)
     lignes_bilan = [
         ("1 · Cartographier agences et centres de données",
-         f"{n_agences} agences recensées après dédoublonnage "
-         f"({n_agences_moov} Moov, {n_agences_tgc} Togocom), dont {n_actives} "
-         f"actives, et {n_dc} centres de données, tous à Lomé. « Télécom » est "
-         "un doublon ; CANAL+ est vide à la source.",
+         f"{n_agences} agences recensées après dédoublonnage, dont "
+         f"{n_actives} actives : {n_agences_moov} Moov et {n_actives_tgc} "
+         f"Togocom actives — et {n_dc} centres de données, tous à Lomé. "
+         "« Télécom » est un doublon ; CANAL+ est vide à la source.",
          "Traité", SERIE_3),
         ("2 · Mobile Money au regard de la population",
          f"{_esp(national)} habitants par point en moyenne, de 1 à "
          f"{_fr(rapport)} entre préfectures ; la moitié la moins desservie de "
-         f"la population ne dispose que de {part_moitie:.0%} des points."
-         .replace("%", " %"),
+         f"la population ne dispose que de {_pct(part_moitie)} des points.",
          "Traité", SERIE_3),
         ("3 · Infrastructures et densité démographique",
          f"{quadrant} préfectures peuplées et sous-desservies. La densité "
-         f"n'explique que {r2_densite:.0%} des écarts d'équipement : le déficit "
-         "n'est pas la fatalité d'un territoire rural.".replace("%", " %"),
+         f"n'explique que {_pct(r2_densite)} des écarts d'équipement : le déficit "
+         "n'est pas la fatalité d'un territoire rural.",
          "Traité", SERIE_3),
         ("4 · Couverture réseau et zones blanches",
          "Non mesurable avec les données ouvertes disponibles — couches "

@@ -11,7 +11,6 @@ une faisabilite ou une rentabilite, qui ne sont pas dans les donnees.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -84,20 +83,20 @@ def afficher(ctx: dict) -> None:
 
     # ============================================== ce qu'il faut retenir
     prio = pref[pref.prefecture.isin(stables)].sort_values("rang_DCPI")
-    national = D.POPULATION_NATIONALE / pref.points_mm.sum()
-    a_ouvrir = int((np.ceil(prio.population / national) - prio.points_mm)
-                   .clip(lower=0).sum())
+    # MEME fonction que la page Arbitrage — meme objectif par defaut (409) —
+    # afin que le total de points a ouvrir soit identique sur les deux pages.
+    prio_couv = D.plan_couverture(prio, D.OBJECTIF_DEFAUT)
+    a_ouvrir = int(prio_couv.points_a_ouvrir.sum())
     rapide_n = actions[(actions.delai == "Rapide")
                        & actions.prioritaire].prefecture.nunique()
     sans_ag = prio[prio.agences_actives == 0]
 
-    def _n(v: float) -> str:
-        return f"{v:,.0f}".replace(",", " ")
+    _n = T.fr
 
     st.markdown(T.a_retenir([
         f"Agir d'abord sur les <b>{len(stables)} territoires robustes</b> : "
-        f"{_n(prio.population.sum())} habitants, "
-        f"{prio.population.sum() / D.POPULATION_NATIONALE * 100:.0f} % de la "
+        f"{_n(prio.population.sum(), 0)} habitants, "
+        f"{T.pct(prio.population.sum() / D.POPULATION_NATIONALE)} de la "
         "population.",
         f"<b>Densifier les agents Mobile Money</b>, levier rapide et sans "
         f"construction, s'applique à {rapide_n} de ces {len(stables)} "
@@ -106,8 +105,9 @@ def afficher(ctx: dict) -> None:
         f"active</b> : {D.liste_fr(sans_ag.prefecture.tolist())}."
         if len(sans_ag) else
         "Tous les territoires prioritaires ont au moins une agence active.",
-        f"Les ramener à la moyenne nationale ({_n(national)} hab./point) "
-        f"demande <b>{_n(a_ouvrir)} points Mobile Money</b> supplémentaires.",
+        f"Les porter à l'objectif de référence ({D.OBJECTIF_DEFAUT} hab./"
+        f"point) demande <b>{_n(a_ouvrir, 0)} points Mobile Money</b> "
+        "supplémentaires.",
     ]), unsafe_allow_html=True)
 
     k = st.columns(4, gap="small")
@@ -115,8 +115,8 @@ def afficher(ctx: dict) -> None:
                         "/ 39", "priorité stable quelles que soient les "
                         "pondérations", T.VERT), unsafe_allow_html=True)
     k[1].markdown(T.kpi("Habitants directement concernés",
-                        f"{int(prio.population.sum()):,}".replace(",", " "), "",
-                        f"{prio.population.sum() / D.POPULATION_NATIONALE:.0%} "
+                        _n(prio.population.sum(), 0), "",
+                        f"{T.pct(prio.population.sum() / D.POPULATION_NATIONALE)} "
                         "de la population", T.SERIE_1), unsafe_allow_html=True)
     rapide = actions[(actions.delai == "Rapide") & actions.prioritaire]
     k[2].markdown(T.kpi("Territoires à levier rapide",
@@ -143,10 +143,12 @@ def afficher(ctx: dict) -> None:
             puces = " &nbsp;·&nbsp; ".join(
                 f'<span style="color:{c}">●</span> {n}'
                 for n, c in zip(mes.levier, mes.couleur))
+            n_ag = int(r.agences_actives)
             detail = (
-                f"<b>{_n(r.population)}</b> hab. &nbsp;·&nbsp; "
-                f"<b>{_n(r.hab_par_point_mm)}</b> hab./point &nbsp;·&nbsp; "
-                f"<b>{int(r.agences_actives)}</b> agence(s) active(s) &nbsp;·&nbsp; "
+                f"<b>{_n(r.population, 0)}</b> hab. &nbsp;·&nbsp; "
+                f"<b>{_n(r.hab_par_point_mm, 0)}</b> hab./point &nbsp;·&nbsp; "
+                f"<b>{n_ag}</b> agence{'s' if n_ag != 1 else ''} "
+                f"active{'s' if n_ag != 1 else ''} &nbsp;·&nbsp; "
                 f"<b>{r.dist_agence_med_canton_km:.0f} km</b><br>"
                 f'<span style="font-size:0.76rem">{puces}</span>')
             st.markdown(T.ligne_priorite(int(r.rang_DCPI), r.prefecture, detail),
@@ -182,10 +184,12 @@ def afficher(ctx: dict) -> None:
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             if len(par_levier):
                 premier = par_levier.iloc[-1]
+                n_terr = int(premier.n)
                 st.markdown(T.conclusion(
                     f"« {premier.levier} » est le levier qui touche le plus "
-                    f"d'habitants : {_n(premier.population)}, sur "
-                    f"{int(premier.n)} territoire(s) prioritaire(s)."),
+                    f"d'habitants : {_n(premier.population, 0)}, sur "
+                    f"{n_terr} territoire{'s' if n_terr != 1 else ''} "
+                    f"prioritaire{'s' if n_terr != 1 else ''}."),
                     unsafe_allow_html=True)
             st.markdown(T.source(
                 "Un même territoire peut relever de plusieurs leviers : les "
@@ -218,32 +222,34 @@ def afficher(ctx: dict) -> None:
     with st.expander("Voir le détail par territoire", expanded=ctx["filtre_actif"]):
         # Tous les territoires du filtre, y compris ceux qu'aucun levier ne
         # declenche : une ligne vide est une information (rien d'urgent).
-        base = vue[["rang_DCPI", "prefecture", "region", "population",
-                    "points_mm"]].rename(columns={"rang_DCPI": "rang"})
-        # Volume d'equipement pour ramener chaque territoire a la moyenne
-        # nationale : meme regle arithmetique que la page Arbitrage.
-        base["a_ouvrir"] = (np.ceil(base.population / national)
-                            - base.points_mm).clip(lower=0).astype(int)
+        # MEME fonction que la page Arbitrage, meme objectif par defaut :
+        # le total ci-dessous doit toujours concorder avec Arbitrage.
+        base = D.plan_couverture(
+            vue[["rang_DCPI", "prefecture", "region", "population",
+                "points_mm"]].rename(columns={"rang_DCPI": "rang"}),
+            D.OBJECTIF_DEFAUT)
         coches = (pd.crosstab(actions.prefecture, actions.levier)
                   .gt(0).replace({True: "●", False: ""}))
-        t = (base.merge(coches, left_on="prefecture", right_index=True,
-                        how="left").fillna("").sort_values("rang"))
+        t = (base.drop(columns="points_cibles")
+             .merge(coches, left_on="prefecture", right_index=True,
+                    how="left").fillna("").sort_values("rang"))
+        col_points = f"Points à ouvrir (objectif {D.OBJECTIF_DEFAUT} hab./pt)"
         t = t.rename(columns={
             "rang": "Rang", "prefecture": "Préfecture", "region": "Région",
             "population": "Population", "points_mm": "Points MM",
-            "a_ouvrir": f"Points à ouvrir (moy. {national:,.0f} hab./pt)"
-            .replace(",", " ")})
+            "points_a_ouvrir": col_points})
         st.dataframe(t.style.format(
             {"Population": "{:,.0f}", "Rang": "{:.0f}", "Points MM": "{:,.0f}",
-             t.columns[5]: "{:,.0f}"}, thousands=" ", decimal=","),
+             col_points: "{:,.0f}"}, thousands=" ", decimal=","),
             width="stretch", hide_index=True)
-        manque = int(base.a_ouvrir.sum())
+        manque = int(base.points_a_ouvrir.sum())
         st.markdown(T.source(
-            f"Ramener chaque territoire du périmètre à la moyenne nationale "
-            f"demanderait <b>{manque:,} points Mobile Money</b> supplémentaires "
-            f"(+{manque / max(int(base.points_mm.sum()), 1):.0%} du parc du "
-            "périmètre). Pour d'autres objectifs, voir la page Arbitrage."
-            .replace(",", " ")), unsafe_allow_html=True)
+            f"Porter chaque territoire du périmètre à l'objectif de "
+            f"référence ({D.OBJECTIF_DEFAUT} hab./point) demanderait "
+            f"<b>{_n(manque, 0)} points Mobile Money</b> supplémentaires "
+            f"(+{T.pct(manque / max(int(base.points_mm.sum()), 1))} du parc "
+            "du périmètre). Pour d'autres objectifs, voir la page "
+            "Arbitrage."), unsafe_allow_html=True)
         st.download_button("Télécharger le plan par territoire (CSV)",
                            D.csv(t, ctx), "plan_action.csv", "text/csv",
                            icon=":material/download:", key="dl_plan")

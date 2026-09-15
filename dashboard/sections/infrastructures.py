@@ -12,6 +12,8 @@ Money servent donc de toile de fond grise, pas de quatrieme serie.
 
 from __future__ import annotations
 
+import re
+
 import streamlit as st
 
 import cartes
@@ -80,7 +82,7 @@ def afficher(ctx: dict) -> None:
                                  label_visibility="collapsed")
             mm = D.mobile_money_operateur(ctx["operateur"])
             fond = st.toggle(
-                f"Fond des {len(mm):,} points Mobile Money".replace(",", " ")
+                f"Fond des {T.fr(len(mm), 0)} points Mobile Money"
                 + ("" if ctx["operateur"] == "Tous" else f" {op}"), value=True)
 
         # Meme definition que le reste de l'outil : la carte montre les
@@ -94,8 +96,11 @@ def afficher(ctx: dict) -> None:
             coul = couleurs[cat]
             n_act = int((pts.categorie == cat).sum())
             n_rec = int((etab_vue.categorie == cat).sum())
+            # Chaque KPI de ce bloc varie avec les filtres region/prefecture/
+            # operateur : la note le rappelle explicitement.
             note = ("sur le territoire sélectionné" if cat == "Data center"
-                    else f"sur {n_rec} recensées après dédoublonnage")
+                    else f"sur {n_rec} recensées après dédoublonnage, "
+                    "sur le territoire sélectionné")
             libelle = ("Centres de données" if cat == "Data center"
                        else cat.replace("Agence", "Agences") + " actives")
             st.markdown(T.kpi(libelle,
@@ -111,8 +116,12 @@ def afficher(ctx: dict) -> None:
             for cat in cats:
                 coul = couleurs[cat]
                 s = pts[pts.categorie == cat]
+                # Legende claire : "Agence Moov active", "Agence Togocom
+                # active", "Centre de données" — jamais l'intitule technique
+                # de categorie tel quel.
                 couches.append({
-                    "nom": cat if cat == "Data center" else f"{cat} active",
+                    "nom": "Centre de données" if cat == "Data center"
+                    else f"{cat} active",
                     "couleur": coul,
                     "lat": s.lat.tolist(), "lon": s.lon.tolist(),
                     "texte": [f"<b>{n}</b><br>{c}, {p}<br>"
@@ -134,9 +143,9 @@ def afficher(ctx: dict) -> None:
 
     st.markdown(
         T.action(
-            "<b>Les trois centres de données du pays sont dans la seule "
-            "préfecture du Golfe.</b> L'hébergement numérique national est "
-            "entièrement concentré à Lomé — aucune redondance géographique "
+            "<b>Les trois centres de données sont concentrés dans le Grand "
+            "Lomé, au sein de la préfecture du Golfe.</b> L'hébergement "
+            "numérique national ne dispose d'aucune redondance géographique "
             "hors de la capitale."), unsafe_allow_html=True)
 
     # ================================================ choroplèthe pilotée
@@ -169,6 +178,9 @@ def afficher(ctx: dict) -> None:
         t = vue.dropna(subset=[col]).nlargest(6, col)[["prefecture", col]]
         st.markdown('<div class="carte-t" style="margin-top:1.1rem">'
                     'Six valeurs les plus élevées</div>', unsafe_allow_html=True)
+        # `fmt` porte le nombre de decimales (ex. ",.2f") : on le reutilise
+        # pour T.fr plutot que de laisser Python's ".2f" imposer un point.
+        dec = int(re.search(r"\.(\d+)f", fmt).group(1))
         for _, r in t.iterrows():
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
@@ -176,7 +188,7 @@ def afficher(ctx: dict) -> None:
                 f'font-size:0.86rem">'
                 f'<span style="color:{T.ENCRE}">{r.prefecture}</span>'
                 f'<span style="font-weight:600;color:{T.ENCRE}">'
-                f'{r[col]:{fmt}}</span></div>'.replace(",", " "),
+                f'{T.fr(r[col], dec)}</span></div>',
                 unsafe_allow_html=True)
 
     with st.expander("Voir toutes les données"):

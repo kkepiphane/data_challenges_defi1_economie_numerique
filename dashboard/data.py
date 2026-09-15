@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -40,6 +41,15 @@ SUPERFICIE_NATIONALE = 57_242.1       # km2, somme COD-AB
 DATE_INFRA = "collecte PRISE 2021-2022"
 DATE_POP = "RGPH-5, novembre 2022"
 DATE_CONTOURS = "COD-AB v02, valide au 07/01/2021"
+
+# Objectif de desserte par defaut : 409 habitants par point, la valeur ronde
+# la plus proche de la moyenne nationale actuelle (409,1). Fixee en DUR, et
+# non recalculee depuis les donnees : Arbitrage (curseur) et Plan d'action
+# (chiffre affiche sans curseur) doivent produire EXACTEMENT le meme total de
+# points a ouvrir pour les memes territoires. Recalculer la moyenne exacte a
+# chaque appel desynchroniserait les deux pages du dernier chiffre apres la
+# virgule — c'est ce qui produisait 1 495 d'un cote et 1 497 de l'autre.
+OBJECTIF_DEFAUT = 409
 
 
 @st.cache_data(show_spinner=False)
@@ -113,12 +123,21 @@ def agences_reperes() -> dict:
 
 
 def libelle_agences(operateur: str = "Tous") -> str:
-    """Phrase de reference, identique partout ou les comptes sont cites."""
+    """LA phrase de reference sur les agences, mot pour mot identique partout
+    ou les comptes sont cites (pied de page, Vue d'ensemble, Méthode, PPT) :
+
+        « 90 agences recensées après dédoublonnage, dont 88 actives :
+          28 Moov et 60 Togocom actives. »
+
+    Le detail par operateur porte sur les ACTIVES (28 Moov, 60 Togocom), pas
+    sur les recensees : c'est le nombre qui entre dans les calculs, et c'est
+    lui que le lecteur veut voir decompose par operateur.
+    """
     a = agences_reperes()
     if operateur == "Tous":
-        return (f"{a['recensees']} agences recensées après dédoublonnage "
-                f"({a['recensees_moov']} Moov, {a['recensees_togocom']} Togocom), "
-                f"dont {a['actives']} actives")
+        return (f"{a['recensees']} agences recensées après dédoublonnage, "
+                f"dont {a['actives']} actives : {a['actives_moov']} Moov et "
+                f"{a['actives_togocom']} Togocom actives")
     s = operateur.lower()
     return (f"{a[f'recensees_{s}']} agences {operateur} recensées, "
             f"dont {a[f'actives_{s}']} actives")
@@ -287,6 +306,25 @@ def ouvrir_fiche(cle: str, noms: list[str], changer_de_page: bool = False):
 def rapport(nom: str) -> str:
     chemin = REPORTS / f"{nom}.md"
     return chemin.read_text(encoding="utf-8") if chemin.exists() else ""
+
+
+def plan_couverture(df: pd.DataFrame, objectif: int = OBJECTIF_DEFAUT) -> pd.DataFrame:
+    """Points a ouvrir pour porter chaque territoire a `objectif` habitants
+    par point de service. UNE SEULE fonction, utilisee sans exception par
+    Arbitrage et Plan d'action : deux pages qui appliqueraient chacune sa
+    propre formule peuvent converger vers deux totaux differents pour la
+    meme question — c'est exactement ce que cette fonction interdit.
+
+        points_cibles   = ceil(population / objectif)
+        points_a_ouvrir = max(points_cibles - points_existants, 0)
+
+    Un territoire deja mieux desservi que l'objectif n'a rien a rendre : le
+    plancher a zero est deliberement asymetrique.
+    """
+    t = df.copy()
+    t["points_cibles"] = np.ceil(t.population / objectif).astype(int)
+    t["points_a_ouvrir"] = (t.points_cibles - t.points_mm).clip(lower=0).astype(int)
+    return t
 
 
 def part_points_moitie_moins_desservie(pref: pd.DataFrame) -> float:
