@@ -246,6 +246,13 @@ CSS = f"""
      marge de document. */
   section[data-testid="stSidebar"] {{
       background: {PAPIER}; border-right: 1px solid {FILET};
+      /* 319px : largeur testee et retenue directement dans le navigateur
+         (inspecteur), plus confortable que le defaut Streamlit pour les
+         libelles de filtre et les intitules de page. Pas de !important —
+         Streamlit pose sa propre largeur en style inline des que
+         l'utilisateur redimensionne a la souris ; cette regle ne fixe que
+         le POINT DE DEPART, jamais verrouille. */
+      width: 319px;
   }}
   section[data-testid="stSidebar"] > div {{ padding: 1.5rem 1.1rem 1.5rem 1.4rem; }}
 
